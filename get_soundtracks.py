@@ -1,4 +1,4 @@
-from common import spotify_instance
+from common import spotify_instance, reg_cleaner
 import pandas as pd
 import re
 import pprint
@@ -12,16 +12,6 @@ films = ['Forrest Gump', 'Almost Famous',
          'Grease', 'Dazed and Confused',
          'Waynes World', 'High Fidelity',
          'Purple Rain']
-
-
-def reg_cleaner(string):
-    """
-    simple function to convert string to lowercase and remove special characters
-    :param string: the string you want to clean
-    :return: the clean string
-    """
-    clean_string = re.sub('[^A-Za-z0-9]+', ' ', string).lower()
-    return clean_string
 
 
 def get_film_albums(film_list=films):
@@ -56,7 +46,7 @@ def get_film_playlists(film_list=films):
 
 def find_film_soundtrack_album(albums):
     """
-    clean up a DataFrame of spotify albums with film OSTs 
+    clean up a DataFrame of spotify albums with film OSTs
     :param albums: the DataFrame containing the albums
     :return: a clean small Dataframe with the top matches for each film.
     """
