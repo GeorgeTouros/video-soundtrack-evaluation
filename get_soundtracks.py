@@ -8,7 +8,7 @@ sp = spotify_instance()
 
 # list of movies with rock songs
 films = ['Forrest Gump', 'Almost Famous',
-         'The Blues Brothers', 'School of Rock',
+         'Blues Brothers', 'School of Rock',
          'Grease', 'Dazed and Confused',
          'Waynes World', 'High Fidelity',
          'Purple Rain']
@@ -52,11 +52,34 @@ def find_film_soundtrack_album(albums):
 def find_film_soundtrack_playlist(playlists, film_list=films):
     playlists['clean_names'] = [reg_cleaner(name) for name in playlists['name']]
     playlists['spotify_url'] = [str(url).strip('{\'spotify\': \'').strip("\'}") for url in playlists['external_urls']]
-    for film in film_list:
-        clean_film = reg_cleaner(film)
-        pattern = re.compile('.*('+str(clean_film)+').*(soundtrack|film)')
-        playlists['match'] = [True if re.search(pattern,name) else False for name in playlists['clean_names'] ]
-    return playlists
+    clean_films = [reg_cleaner(film) for film in film_list]
+    clean_playlists = pd.DataFrame()
+    for film in clean_films:
+        pattern = re.compile('.*('+str(film)+').*(soundtrack|film)')
+        playlists['has_film'] = [film if re.search(pattern, name) else None for name in playlists['clean_names']]
+        row = playlists[playlists['has_film'].notna()].head(1)
+        clean_playlists = clean_playlists.append(row)
+    return clean_playlists
+
+
+def find_songs_in_playlist(playlists):
+    useful = playlists[['id', 'has_film']]
+    rows = pd.DataFrame()
+    for playlist, film in useful.values:
+        results = sp.playlist(playlist, fields="tracks,next")
+        tracks = results['tracks']
+        for i, item in enumerate(tracks['items']):
+            track = item['track']
+            artist = track['artists'][0]['name']
+            track_name = track['name']
+            url = track['external_urls']['spotify']
+            data = {'film': film,
+                    'track_name': track_name,
+                    'artist': artist,
+                    'url': url}
+            rows = rows.append(data, ignore_index=True)
+    rows = rows[['film', 'track_name', 'artist', 'url']]
+    return rows
 
 
 if __name__ == '__main__':
@@ -66,3 +89,7 @@ if __name__ == '__main__':
     playlists = get_film_playlists()
     playlists = find_film_soundtrack_playlist(playlists)
     playlists.to_csv('var\\film_playlists.csv', index=False)
+    tracks = find_songs_in_playlist(playlists)
+    tracks.to_csv('var\\tracks.csv',index=False)
+
+# TODO: match with midi file names

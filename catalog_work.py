@@ -108,3 +108,5 @@ if __name__ == '__main__':
 
     merge.to_csv('var\\ennio_catalog.csv', index=False)
     midi_catalog.to_csv('var\\midi_catalog.csv', index=False)
+
+# TODO: use pylast or discogs_client or spotipy to find out the real title of each midi file.
