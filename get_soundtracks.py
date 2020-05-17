@@ -108,5 +108,12 @@ if __name__ == '__main__':
     playlists.to_csv('var\\film_playlists.csv', index=False)
     tracks = find_songs_in_playlist(playlists)
     tracks.to_csv('var\\tracks.csv',index=False)
+    # get the midi title catalog
+    midi = pd.read_csv('var\\midi_titles.csv')
+    # merge the two based on track name
+    merge = pd.merge(left=tracks, right=midi, how='inner', left_on='track_name', right_on='name')
+    pure = merge[['film', 'track_name']].drop_duplicates()
+    match_rate = 100*len(pure)/len(tracks)
+    merge.to_csv('var\\ost_matches.csv', index=False)
+    print('The match rate is %i per cent' % match_rate)
 
-# TODO: match with midi file names

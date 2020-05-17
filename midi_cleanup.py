@@ -42,11 +42,12 @@ def ask_spotify(title):
         pass
 
 
-#def pick_a_title(search_results):
-#    for result in search_results:
-
-
 def get_clean_titles(df):
+    """
+    gets the dataframe of midi titles and searches spotify to get their proper name
+    :param df: the output of get_midi_titles
+    :return: the original df with extra columns containing url, song name and artist
+    """
     songs = []
     for title in df['titles']:
         song_info = ask_spotify(title)
@@ -70,6 +71,9 @@ if __name__ == '__main__':
     df = get_midi_titles(df)
     songs = get_clean_titles(df)
     songs.to_csv('var\\midi_titles.csv', index=False)
+    matches = songs[songs['midi_title'].notna()]
+    match_rate = 100 * len(matches) / len(songs)
+    print('The match rate is %i per cent' % match_rate)
     script_run_time()
-# TODO: use pylast or discogs_client or spotipy to find out the real title of each midi file.
+# TODO: the match rate is at 67%. Try pylast or discogs_client to see if match rate improves.
 
