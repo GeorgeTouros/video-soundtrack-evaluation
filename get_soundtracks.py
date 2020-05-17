@@ -11,7 +11,10 @@ films = ['Forrest Gump', 'Almost Famous',
          'Blues Brothers', 'School of Rock',
          'Grease', 'Dazed and Confused',
          'Waynes World', 'High Fidelity',
-         'Purple Rain']
+         'Purple Rain', 'Reservoir Dogs',
+         'Pulp Fiction', 'Django Unchained',
+         'Strawberry Statement', 'Woman in Red',
+         'Top Gun', 'Guardians of the Galaxy']
 
 
 def get_film_albums(film_list=films):
@@ -113,6 +116,7 @@ if __name__ == '__main__':
     # merge the two based on track name
     merge = pd.merge(left=tracks, right=midi, how='inner', left_on='track_name', right_on='name')
     pure = merge[['film', 'track_name']].drop_duplicates()
+    print('There are %i matches' % len(pure))
     match_rate = 100*len(pure)/len(tracks)
     merge.to_csv('var\\ost_matches.csv', index=False)
     print('The match rate is %i per cent' % match_rate)
