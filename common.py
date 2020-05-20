@@ -12,13 +12,13 @@ def spotify_instance():
     sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
     return sp
 
-def ask_spotify(title):
+def ask_spotify(title, sp):
     """
     for a potential title, ask spotify for a name
     :param title:
+    :param sp: a spotify instance
     :return: list of song attribute
     """
-    sp = spotify_instance()
     song = sp.search(q=title, limit=1, type='track')
     try:
         info = song['tracks']['items'][0]

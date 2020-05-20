@@ -1,10 +1,10 @@
 from imdb import IMDb
 import pandas as pd
-from common import script_start_time, script_run_time, ask_spotify
+from common import script_start_time, script_run_time, ask_spotify, spotify_instance
 
 # initiate IMDb instance
 ia = IMDb()
-
+sp = spotify_instance()
 
 def top250films():
     films = ia.get_top250_movies()
@@ -22,7 +22,7 @@ def get_ost(film_id, film_name):
     for soundtrack in ost['data']['soundtrack']:
         song = list(soundtrack.keys())
         song_name = song[0]
-        clean = ask_spotify(song_name)
+        clean = ask_spotify(song_name, sp)
         if clean:
             song_data = {'film': film_name, 'film_id': film_id, 'imdb_song': song_name, 'spotify_song': clean['name']}
         else:
@@ -52,9 +52,9 @@ if __name__ == '__main__':
                      how='inner',
                      left_on='spotify_song',
                      right_on='name')
-    pure = merge[['film', 'song']].drop_duplicates()
+    pure = merge[['film', 'spotify_song']].drop_duplicates()
     print('There are %i matches' % len(pure))
     match_rate = 100*len(pure)/len(osts)
     merge.to_csv('var\\imdb_ost_matches.csv', index=False)
-    # print('The match rate is %i per cent' % match_rate)
+    print('The match rate is %i per cent' % match_rate)
     script_run_time()
