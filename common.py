@@ -12,6 +12,25 @@ def spotify_instance():
     sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
     return sp
 
+def ask_spotify(title):
+    """
+    for a potential title, ask spotify for a name
+    :param title:
+    :return: list of song attribute
+    """
+    sp = spotify_instance()
+    song = sp.search(q=title, limit=1, type='track')
+    try:
+        info = song['tracks']['items'][0]
+        if info:
+            artist = info['artists'][0]['name']
+            song_name = info['name']
+            song_url = info['external_urls']['spotify']
+            data = {'name': song_name, 'artist': artist, 'URL': song_url, 'midi_title': title}
+        return data
+    except IndexError:
+        pass
+
 
 def reg_cleaner(string, numbers=True):
     """

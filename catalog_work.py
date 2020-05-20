@@ -1,7 +1,7 @@
 import os
 import re
 import pandas as pd
-from common import reg_cleaner, spotify_instance, script_start_time, script_run_time
+from common import reg_cleaner, spotify_instance, script_start_time, script_run_time, ask_spotify
 
 
 def create_catalog(directory, except_dir='', except_file=''):
@@ -99,20 +99,6 @@ def get_midi_titles(df):
     return df
 
 
-def ask_spotify(title):
-    """
-    for a potential title, ask spotify for a name
-    :param title:
-    :return: list of song attribute
-    """
-    song = sp.search(q=title, limit=1, type='track')
-    try:
-        info = song['tracks']['items'][0]
-        return info
-    except IndexError:
-        pass
-
-
 def get_clean_titles(df):
     """
     gets the dataframe of midi titles and searches spotify to get their proper name
@@ -123,11 +109,7 @@ def get_clean_titles(df):
     for title in df['titles']:
         song_info = ask_spotify(title)
         if song_info:
-            artist = song_info['artists'][0]['name']
-            song_name = song_info['name']
-            song_url = song_info['external_urls']['spotify']
-            data = {'name': song_name, 'artist': artist, 'URL': song_url, 'midi_title': title}
-            songs.append(data.copy())
+            songs.append(song_info.copy())
         else:
             pass
     song_df = pd.DataFrame.from_records(songs)
