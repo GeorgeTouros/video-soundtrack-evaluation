@@ -2,3 +2,6 @@ mido~=1.2.9
 pandas~=1.0.3
 spotipy~=2.12.0
 wheel~=0.34.2
+requests~=2.23.0
+python-qbittorrent~=0.4.2
+beautifulsoup4~=4.9.0

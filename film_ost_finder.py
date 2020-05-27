@@ -57,4 +57,6 @@ if __name__ == '__main__':
     match_rate = 100*len(pure)/len(osts)
     merge.to_csv('var\\imdb_ost_matches.csv', index=False)
     print('The match rate is %i per cent' % match_rate)
+    purer = merge['film'].drop_duplicates()
+    purer.to_csv(r'var\film_list.csv', index=False)
     script_run_time()
