@@ -7,6 +7,7 @@ from datetime import datetime
 from qbittorrent import Client
 import os.path
 import time
+import csv
 
 
 def wait_for_file(file_path):
@@ -75,4 +76,19 @@ def qbit_instance():
 
     qb.login(webui['username'], webui['pass'])
     return qb
+
+
+def append_to_csv(csv_file, data, create=False):
+    if create:
+        with open(csv_file, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',',
+                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(data)
+    if not create:
+        with open(csv_file, 'a+', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',',
+                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(data)
+
+
 

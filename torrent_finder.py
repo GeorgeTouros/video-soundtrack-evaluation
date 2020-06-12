@@ -1,7 +1,7 @@
-import re, requests, os, time, errno, json
+import requests, os, time
 from bs4 import BeautifulSoup
 import pandas as pd
-from common import qbit_instance, chunker
+from common import qbit_instance, chunker, append_to_csv
 
 qb = qbit_instance()
 
@@ -11,49 +11,38 @@ headers = {
 
 wishlist = pd.read_csv(r'var\film_list.csv', header=None)
 
+if not os.path.exists(r'var\available_films.csv'):
+    append_to_csv(csv_file=r'var\available_films.csv',
+                  data =['movie', 'magnet_link', 'filename'],
+                  create=True)
 
-group_no = 0
+group_no = 1
 for group in chunker(wishlist[0], 20):
-    dir_catalog = {}
-    path = r"data\films\batch"+str(group_no)
-    try:
-        os.umask(0o777)
-        os.makedirs(path, mode=0o777)
-        os.chmod(path, 0o777)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-        else:
+    print("Starting work on batch %s " % group_no)
+    for movie in group:
+        # check if you already have a film
+        available_films = pd.read_csv(r'var\available_films.csv', header=0)
+        if movie in available_films['movie'].values:
+            print(movie + ' already in db')
             pass
-    else:
-        print("Successfully created the directory %s " % path)
-
-        for movie in group:
-            q_movie = str(movie + ' film').replace(' ', '+')
+        else:
+            q_movie = movie.replace(' ', '+')
             r = requests.get('https://tpb.party/search/{m}?q={m}'.format(m=q_movie), headers=headers)
             soup = BeautifulSoup(r.text, 'lxml')
             try:
                 magnet_link = [x['href'] for x in soup.findAll('a', href=True) if 'magnet' in x['href']][0]
                 print('Getting film ' + str(movie))
-                qb.download_from_link(str(magnet_link), savepath=path)
-
-                dir_catalog[movie] = {'path': path, 'magnet': magnet_link}
+                qb.download_from_link(str(magnet_link))
+                file_name = qb.torrents(filter='downloading', sort='added_on', limit=1, reverse=True)[0]['name']
+                # update the film catalog file
+                append_to_csv(r'var\available_films.csv', [movie, magnet_link, file_name], create=False)
             except:
                 print('Failed to find magnet for ' + movie)
 
-        # update the film catalog file
-        with open(r'var\film_directory.json', 'a+') as f:
-            try:
-                data = json.load(f)
-                data.append(dir_catalog)
-                json.dump(data, f)
-            except json.decoder.JSONDecodeError:
-                json.dump(dir_catalog, f)
-
+    downloading = qb.torrents(filter='downloading')
+    while len(downloading) > 10:
+        time.sleep(5)
         downloading = qb.torrents(filter='downloading')
-        while len(downloading) > 5:
-            time.sleep(5)
-            downloading = qb.torrents(filter='downloading')
         # cleanup
         completed = qb.torrents(filter='completed')
         for tor in completed:
