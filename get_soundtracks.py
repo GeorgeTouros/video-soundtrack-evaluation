@@ -1,10 +1,8 @@
-from common import spotify_instance, reg_cleaner
+from common import reg_cleaner
+from spotify_wrapper.spotify import Spotify
 import pandas as pd
 import re
-import pprint
 
-# load spotify instance
-sp = spotify_instance()
 
 # list of movies with rock songs
 films = ['Forrest Gump', 'Almost Famous',
@@ -25,7 +23,7 @@ def get_film_albums(film_list=films):
     """
     albums = pd.DataFrame()
     for film in film_list:
-        result = sp.search(q=film, limit=50, type='album')
+        result = Spotify.search(q=film, limit=50, type='album')
         df = pd.DataFrame.from_dict(result['albums']['items'])
         df.head()
         albums = albums.append(df)
@@ -40,7 +38,7 @@ def get_film_playlists(film_list=films):
     """
     playlists = pd.DataFrame()
     for film in film_list:
-        result = sp.search(q=film, limit=50, type='playlist')
+        result = Spotify.search(q=film, limit=50, type='playlist')
         df = pd.DataFrame.from_dict(result['playlists']['items'])
         df.head()
         playlists = playlists.append(df)
@@ -86,7 +84,7 @@ def find_songs_in_playlist(playlists):
     useful = playlists[['id', 'has_film']]
     rows = pd.DataFrame()
     for playlist, film in useful.values:
-        results = sp.playlist(playlist, fields="tracks,next")
+        results = Spotify.playlist(q= playlist, fields="tracks,next")
         tracks = results['tracks']
         for i, item in enumerate(tracks['items']):
             track = item['track']
