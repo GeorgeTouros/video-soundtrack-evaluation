@@ -3,6 +3,7 @@ import re
 import pandas as pd
 from common import reg_cleaner, script_start_time, script_run_time
 from spotify_wrapper.spotify import Spotify
+from paths import audio_path, video_path, midi_path
 
 
 def create_catalog(directory, except_dir='', except_file=''):
@@ -32,13 +33,22 @@ def create_catalog(directory, except_dir='', except_file=''):
     return output
 
 
-def get_midi_titles(df):
+def get_titles(df, type, allow_numbers=False):
     """
     get the titles of the midi files and return a DataFrame with them
+    :param allow_numbers: boolean that passes to the regex cleaner function and allows numbers in the output.
     :param df: the midi track catalogue
+    :param type: the type of files in the catalogue. Possible values: "audio", "video", "midi"
     :return: df with an extra column with titles
     """
-    suffix = re.compile('(.*)(\.mid|\.MID|\.Mid)')
+    if type == "midi":
+        suffix = re.compile('(.*)(\.mid|\.MID|\.Mid)')
+    elif type == "audio":
+        suffix = re.compile('(.*)(\.mp3|\.wav|\.MP3|\.WAV)')
+    elif type == "video":
+        suffix = re.compile('(.*)(\.mp4|\.mkv|\.avi)')
+    else:
+        raise ValueError
 
     titles = []
     for filename in df['filename']:
@@ -46,31 +56,7 @@ def get_midi_titles(df):
         suf_search = re.search(suffix, filename)
         if suf_search:
             stripped = suf_search.group(1)
-            words = reg_cleaner(stripped, numbers=False)
-            titles.append(words)
-        else:
-            titles.append('')
-
-    df['titles'] = titles
-    df = df[df['titles'] != '']
-    return df
-
-
-def get_audio_titles(df):
-    """
-    get the titles of the mp3 files and return a DataFrame with them
-    :param df: the mp3 catalogue
-    :return: df with an extra column with titles
-    """
-    suffix = re.compile('(.*)(\.mp3|\.wav|\.MP3|\.WAV)')
-
-    titles = []
-    for filename in df['filename']:
-        # remove suffix
-        suf_search = re.search(suffix, filename)
-        if suf_search:
-            stripped = suf_search.group(1)
-            words = reg_cleaner(stripped, numbers=False)
+            words = reg_cleaner(stripped, allow_numbers=allow_numbers)
             titles.append(words)
         else:
             titles.append('')
@@ -82,8 +68,8 @@ def get_audio_titles(df):
 
 def get_clean_song_titles(df):
     """
-    gets the dataframe of midi titles and searches spotify to get their proper name
-    :param df: the output of get_midi_titles
+    gets the dataframe of song titles and searches spotify to get their proper name
+    :param df: the output of get_titles
     :return: the original df with extra columns containing url, song name and artist
     """
     songs = []
@@ -94,13 +80,27 @@ def get_clean_song_titles(df):
         else:
             pass
     song_df = pd.DataFrame.from_records(songs)
-    df = df.merge(right=song_df, left_on='titles', right_on='midi_title', how='left')
+    df = df.merge(right=song_df, left_on='titles', right_on='clean_title', how='left')
     return df
 
 
-def get_film_names(df):
-    # TODO: create a function that will create a catalog of the available films.
-    pass
+def get_clean_video_titles(df):
+    """
+    gets the dataframe of video titles and cleans it up from irrelevant words and then
+    searches IMDb to get their proper name
+    :param df: the output of get_titles
+    :return: the original df with extra columns containing url, song name and artist
+    """
+    video_name_stopwords = ['bdrip', 'brrip', '1080p', '720p',
+                            'www', 'yifi', ' anoxmous', 'bluray',
+                            'webrip', 'criterion', 'dvdrip', 'x264',
+                            ]
+
+    cleaner_titles = []
+
+    song_df = pd.DataFrame.from_records(songs)
+    df = df.merge(right=song_df, left_on='titles', right_on='clean_title', how='left')
+    return df
 
 
 if __name__ == '__main__':
@@ -110,17 +110,17 @@ if __name__ == '__main__':
     irrelevant_midi = re.compile('\._|\.DS_Store')
     irrelevant_dir = 'lmd_matched'
     # we also remove the windows hidden files
-    irrelevant_index_file = re.compile('desktop.ini|.*\.jpg|.*\.db|.*\.txt|\.url')
+    irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 
     # start with the midi files
     print('start midi catalog')
-    midi_dir = r'/media/zappatistas20/Elements/Thesis/Data/midis/'
+    midi_dir = midi_path
     midi_catalog = create_catalog(midi_dir, irrelevant_dir, irrelevant_midi)
     print('finish midi catalog')
 
     # clean -up the midi title names
     print('start midi catalog cleanup')
-    midi_catalog = get_midi_titles(midi_catalog)
+    midi_catalog = get_titles(midi_catalog, "midi", allow_numbers=True)
     songs = get_clean_song_titles(midi_catalog)
 
     matches = songs[songs['midi_title'].notna()]
@@ -130,18 +130,19 @@ if __name__ == '__main__':
 
     # continue with the audio files
     print('start audio catalog')
-    audio_dir = r'/media/zappatistas20/Elements/Music/'
-    audio_catalog = create_catalog(audio_dir, except_file=irrelevant_index_file)
-    audio_catalog = get_audio_titles(audio_catalog)
+    audio_dir = audio_path
+    audio_catalog = create_catalog(audio_dir, except_file=irrelevant_files)
+    audio_catalog = get_titles(audio_catalog, "audio")
     audio_catalog = get_clean_song_titles(audio_catalog)
     audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
     print('finish audio catalog')
 
     # continue with the video files
     print('start video catalog')
-    video_dir = 'data\\2020-03-22_21_25\\data\\downloads\\downloaded\\video'
-    video_catalog = create_catalog(video_dir, except_file=irrelevant_index_file)
-    video_catalog = get_film_names(video_catalog)
+    video_dir = video_path
+    video_catalog = create_catalog(video_dir, except_file=irrelevant_files)
+    video_catalog = get_titles(video_catalog, "video", allow_numbers=True)
+    video_catalog = get_clean_video_titles(video_catalog)
     video_catalog.to_csv(r'var/video_catalog.csv', index=False)
     print('finish video catalog')
     print('cleanup audio_video')

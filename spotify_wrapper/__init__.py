@@ -1,7 +1,7 @@
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from credentials import spotify_creds
-from .spotify import Spotify
+
 
 
 # login to Spotify to get the albums

@@ -16,14 +16,14 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
-def reg_cleaner(string, numbers=True):
+def reg_cleaner(string, allow_numbers=True):
     """
     simple function to convert string to lowercase and remove special characters
-    :param numbers: specify if you want to allow numbers or not (default yes)
+    :param allow_numbers: specify if you want to allow numbers or not (default yes)
     :param string: the string you want to clean
     :return: the clean string
     """
-    if numbers:
+    if allow_numbers:
         clean_string = re.sub('[^A-Za-z0-9]+', ' ', string).lower()
     else:
         clean_string = re.sub('[^A-Za-z]+', ' ', string).lower()

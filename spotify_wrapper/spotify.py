@@ -20,7 +20,7 @@ class Spotify(object):
                 artist = info['artists'][0]['name']
                 song_name = info['name']
                 song_url = info['external_urls']['spotify']
-                data = {'name': song_name, 'artist': artist, 'URL': song_url, 'midi_title': title}
+                data = {'name': song_name, 'artist': artist, 'URL': song_url, 'clean_title': title}
             return data
         except IndexError:
             pass
