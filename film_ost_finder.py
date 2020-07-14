@@ -1,28 +1,16 @@
-from imdb import IMDb
 import pandas as pd
-from common import script_start_time, script_run_time, ask_spotify, spotify_instance
-
-# initiate IMDb instance
-ia = IMDb()
-sp = spotify_instance()
-
-def top250films():
-    films = ia.get_top250_movies()
-    film_ids = {}
-    for film in films:
-        film_id = film.movieID
-        film_name = film['title']
-        film_ids[film_id] = film_name
-    return film_ids
+from common import script_start_time, script_run_time
+from imdb_wrapper.imdb import IMDB
+from spotify_wrapper.spotify import Spotify
 
 
 def get_ost(film_id, film_name):
-    ost = ia.get_movie_soundtrack(film_id)
+    ost = IMDB.get_movie_soundtrack(film_id)
     data = pd.DataFrame()
     for soundtrack in ost['data']['soundtrack']:
         song = list(soundtrack.keys())
         song_name = song[0]
-        clean = ask_spotify(song_name, sp)
+        clean = Spotify.ask_spotify(song_name)
         if clean:
             song_data = {'film': film_name, 'film_id': film_id, 'imdb_song': song_name, 'spotify_song': clean['name']}
         else:
@@ -34,7 +22,7 @@ def get_ost(film_id, film_name):
 if __name__ == '__main__':
     script_start_time()
     print('getting films')
-    films = top250films()
+    films = IMDB.top250films()
     osts = pd.DataFrame()
     print('getting soundtracks')
     for film in films.keys():

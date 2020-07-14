@@ -5,3 +5,4 @@ wheel~=0.34.2
 requests~=2.23.0
 python-qbittorrent~=0.4.2
 beautifulsoup4~=4.9.0
+imdbpy~=6.8
