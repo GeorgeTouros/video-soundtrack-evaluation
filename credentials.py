@@ -5,3 +5,7 @@ webui = {'IP': 'http://127.0.0.1:8061/',
          'port': 8061,
          'username': 'frankZappa',
          'pass': 'DB4D5637406B1EB10AAC602B2CC29C5A'}
+
+MySQL = {'user': 'root',
+         'password': '1234',
+         'host': 'localhost'}

@@ -4,7 +4,7 @@ import pandas as pd
 from common import reg_cleaner, script_start_time, script_run_time
 from spotify_wrapper.spotify import Spotify
 from paths import audio_path, video_path, midi_path
-
+import db_handler
 
 def create_catalog(directory, except_dir='', except_file=''):
     """
@@ -91,19 +91,15 @@ def get_clean_video_titles(df):
     :param df: the output of get_titles
     :return: the original df with extra columns containing url, song name and artist
     """
-    video_name_stopwords = ['bdrip', 'brrip', '1080p', '720p',
-                            'www', 'yifi', ' anoxmous', 'bluray',
-                            'webrip', 'criterion', 'dvdrip', 'x264',
-                            ]
+
 
     cleaner_titles = []
 
-    song_df = pd.DataFrame.from_records(songs)
-    df = df.merge(right=song_df, left_on='titles', right_on='clean_title', how='left')
     return df
 
 
 if __name__ == '__main__':
+    print('Catalog creation')
     script_start_time()
     # Each midi file also has an indexing file that starts with .-
     # We remove those
@@ -112,45 +108,52 @@ if __name__ == '__main__':
     # we also remove the windows hidden files
     irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 
-    # start with the midi files
-    print('start midi catalog')
-    midi_dir = midi_path
-    midi_catalog = create_catalog(midi_dir, irrelevant_dir, irrelevant_midi)
-    print('finish midi catalog')
+    engine = db_handler.engine
 
-    # clean -up the midi title names
-    print('start midi catalog cleanup')
-    midi_catalog = get_titles(midi_catalog, "midi", allow_numbers=True)
-    songs = get_clean_song_titles(midi_catalog)
+    db_handler.create_db('file_system_catalogs')
 
-    matches = songs[songs['midi_title'].notna()]
-    match_rate = 100 * len(matches) / len(songs)
-    print('The match rate is %i per cent' % match_rate)
-    # TODO: the match rate is at 67%. Try pylast or discogs_client to see if match rate improves.
+    mode = input('How do you want to run the whole pipeline? (all, midi, audio, video)')
 
-    # continue with the audio files
-    print('start audio catalog')
-    audio_dir = audio_path
-    audio_catalog = create_catalog(audio_dir, except_file=irrelevant_files)
-    audio_catalog = get_titles(audio_catalog, "audio")
-    audio_catalog = get_clean_song_titles(audio_catalog)
-    audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
-    print('finish audio catalog')
+    if mode in ["midi", "all"] :
+        # start with the midi files
+        print('start midi catalog')
+        midi_dir = midi_path
+        midi_catalog = create_catalog(midi_dir, irrelevant_dir, irrelevant_midi)
+        print('finish initial midi catalog')
 
-    # continue with the video files
-    print('start video catalog')
-    video_dir = video_path
-    video_catalog = create_catalog(video_dir, except_file=irrelevant_files)
-    video_catalog = get_titles(video_catalog, "video", allow_numbers=True)
-    video_catalog = get_clean_video_titles(video_catalog)
-    video_catalog.to_csv(r'var/video_catalog.csv', index=False)
-    print('finish video catalog')
-    print('cleanup audio_video')
+        # clean -up the midi title names
+        print('start midi catalog cleanup')
+        midi_catalog = get_titles(midi_catalog, "midi", allow_numbers=True)
+        songs = get_clean_song_titles(midi_catalog)
+        songs.to_csv(r'var/midi_catalog.csv', index=False)
+        songs.to_sql('file_system_catalogs.dbo.midi_catalog', con=engine, if_exists='replace')
 
-    print('dumping all to csv')
+        matches = songs[songs['clean_title'].notna()]
+        recall = 100 * len(matches) / len(songs)
+        print('The recall is %i per cent' % recall)
+        # TODO: the match rate is at 67%. Try pylast or discogs_client to see if match rate improves.
 
-    midi_catalog.to_csv(r'var/midi_catalog.csv', index=False)
-    songs.to_csv(r'var/midi_titles.csv', index=False)
+    if mode in ["audio", "all"]:
+        # continue with the audio files
+        print('start audio catalog')
+        audio_dir = audio_path
+        audio_catalog = create_catalog(audio_dir, except_file=irrelevant_files)
+        audio_catalog = get_titles(audio_catalog, "audio")
+        audio_catalog = get_clean_song_titles(audio_catalog)
+        audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
+        audio_catalog.to_sql('audio_catalog', con=engine, if_exists='replace')
+        print('finish audio catalog')
+
+    if mode in ['video', 'all']:
+        # continue with the video files
+        print('start video catalog')
+        video_dir = video_path
+        video_catalog = create_catalog(video_dir, except_file=irrelevant_files)
+        video_catalog = get_titles(video_catalog, "video", allow_numbers=True)
+        # video_catalog = get_clean_video_titles(video_catalog)
+        video_catalog.to_csv(r'var/video_catalog.csv', index=False)
+        video_catalog.to_sql('video_catalog', con=engine, if_exists='replace')
+        print('finish video catalog')
 
     script_run_time()
 
