@@ -1,4 +1,4 @@
-from common import reg_cleaner
+from cataloger.catalog_utils import reg_cleaner
 from spotify_wrapper.spotify import Spotify
 import pandas as pd
 import re

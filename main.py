@@ -25,8 +25,6 @@ if __name__ == '__main__':
 
     db_connection = db.connection
 
-
-
     mode = input('How do you want to run the whole pipeline? (all, midi, audio, video)')
 
     if mode in ["midi", "all"] :
