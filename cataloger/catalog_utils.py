@@ -117,9 +117,9 @@ def reg_cleaner(string, allow_numbers=True):
 
     removed_stopwords = remove_stopwords(clean_string)
 
-    removed_multi_space = removed_stopwords.sub('(s+)')
+    removed_multi_space = remove_multi_spaces(removed_stopwords)
 
-    return remove_stopwords
+    return removed_multi_space
 
 
 def remove_stopwords(string):
@@ -132,7 +132,7 @@ def remove_stopwords(string):
     return remove_stopwords
 
 
-def remove_double_space(string):
+def remove_multi_spaces(string):
     multiple_spaces = re.compile('(\s\s+)')
     stripped_string = re.sub(multiple_spaces, ' ', string)
     return stripped_string
