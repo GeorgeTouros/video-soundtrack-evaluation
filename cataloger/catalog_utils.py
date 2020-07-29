@@ -115,13 +115,24 @@ def reg_cleaner(string, allow_numbers=True):
 
     clean_string = pascalcase.lower()
 
+    removed_stopwords = remove_stopwords(clean_string)
+
+    removed_multi_space = removed_stopwords.sub('(s+)')
+
+    return remove_stopwords
+
+
+def remove_stopwords(string):
     stop = ''
     for stopword in FILENAME_STOPWORDS:
         stop += str(stopword) + '|'
     stop = stop[0:-1]
-
-    stopword_re = re.compile('(\s+)('+stop+')(\s+|$)')
-
-    remove_stopwords = stopword_re.sub('', clean_string)
-
+    stopword_re = re.compile('(\s+)(' + stop + ')(\s+|$)')
+    remove_stopwords = stopword_re.sub(' ', string)
     return remove_stopwords
+
+
+def remove_double_space(string):
+    multiple_spaces = re.compile('(\s\s+)')
+    stripped_string = re.sub(multiple_spaces, ' ', string)
+    return stripped_string

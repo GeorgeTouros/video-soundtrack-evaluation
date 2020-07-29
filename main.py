@@ -37,6 +37,7 @@ if __name__ == '__main__':
         print('start midi catalog cleanup')
         midi_catalog = cleanup_file_titles(midi_catalog, "midi", allow_numbers=True)
         midi_catalog = get_clean_song_titles_from_spotify(midi_catalog)
+        midi_catalog.drop_duplicates(inplace=True)
         midi_catalog.to_csv(r'var/midi_catalog.csv', index=False)
         midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='replace')
 
