@@ -42,13 +42,14 @@ def cleanup_file_titles(df, file_type, allow_numbers=False):
     :param file_type: the type of files in the catalogue. Possible values: "audio", "video", "midi"
     :return: df with an extra column with titles
     """
-    suffix = determine_irrelevant_suffices(file_type)
+    suffix = determine_relevant_suffices(file_type)
 
     titles = []
     for filename in df['filename']:
-        # remove suffix
+        # only keep relevant file types
         suf_search = re.search(suffix, filename)
         if suf_search:
+            #strip from suffix
             stripped = suf_search.group(1)
             words = reg_cleaner(stripped, allow_numbers=allow_numbers)
             titles.append(words)
@@ -60,7 +61,7 @@ def cleanup_file_titles(df, file_type, allow_numbers=False):
     return df
 
 
-def determine_irrelevant_suffices(file_type):
+def determine_relevant_suffices(file_type):
     if file_type == "midi":
         suffix = re.compile('(.*)(\.mid|\.MID|\.Mid)')
     elif file_type == "audio":

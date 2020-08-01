@@ -1,5 +1,5 @@
 import re
-
+import pandas as pd
 from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_clean_song_titles_from_spotify
 from common import script_start_time, script_run_time
 from paths import audio_path, video_path, midi_path
@@ -25,7 +25,16 @@ if __name__ == '__main__':
 
     db_connection = db.connection
 
-    mode = input('How do you want to run the whole pipeline? (all, midi, audio, video)')
+    print("""How do you want to run the pipeline? Choose one of the modes below
+    all
+    midi
+    audio
+    video
+    merge (to merge audio and video catalogs)
+    fingerprint (to create fingerprints)
+    clip_finder (to find songs in videos)""")
+
+    mode = input()
 
     if mode in ["midi", "all"] :
         # start with the midi files
@@ -52,6 +61,7 @@ if __name__ == '__main__':
         audio_catalog = create_catalog(audio_path, except_file=irrelevant_files)
         audio_catalog = cleanup_file_titles(audio_catalog, "audio")
         audio_catalog = get_clean_song_titles_from_spotify(audio_catalog)
+        audio_catalog.drop_duplicates(inplace=True)
         audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
         audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='replace')
         print('finish audio catalog')
@@ -65,6 +75,14 @@ if __name__ == '__main__':
         video_catalog.to_csv(r'var/video_catalog.csv', index=False)
         video_catalog.to_sql('video_catalog', con=db_connection, if_exists='replace')
         print('finish video catalog')
+
+    if mode in ['merge_video_audio', 'all']:
+        midi = pd.read_sql_table('midi_catalog', con=db_connection)
+        audio = pd.read_sql_table('audio_catalog', con=db_connection)
+        pos_midi = midi[midi['spotify_name'].notna()]
+        pos_audio = audio[audio['spotify_name'].notna()]
+        merge = pos_midi.merge(right=pos_audio, how='inner', on='spotify_name')
+        merge.drop_duplicates(subset='spotify_name', inplace=True)
 
     script_run_time()
 
