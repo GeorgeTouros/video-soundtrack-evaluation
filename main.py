@@ -12,7 +12,7 @@ if __name__ == '__main__':
     # Each midi file also has an indexing file that starts with .-
     # We remove those
     irrelevant_midi = re.compile('\._|\.DS_Store')
-    irrelevant_dir = 'lmd_matched'
+    irrelevant_dir = ['lmd_matched', 'cariart', 'download-midi']
     # we also remove the windows hidden files
     irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 

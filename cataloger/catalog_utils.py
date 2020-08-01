@@ -6,11 +6,11 @@ import pandas as pd
 from spotify_wrapper.spotify import Spotify
 
 
-def create_catalog(directory, except_dir='', except_file=''):
+def create_catalog(directory, except_dir=[], except_file=''):
     """
     Takes a directory as an input, and outputs a pandas DF with a full catalog of files and locations
     :param directory: the directory you want to be cataloged
-    :param except_dir: optional argument to exclude irrelevant directories. Accepts str or compiled RegEx
+    :param except_dir: optional argument to exclude irrelevant directories. Accepts list
     :param except_file: optional argument to exclude irrelevant files. Accepts str or compiled RegEx
     :return: Pandas DF with the relevant catalog
     """
@@ -18,8 +18,9 @@ def create_catalog(directory, except_dir='', except_file=''):
     names = []
     for dirname, dirnames, filenames in os.walk(directory):
         # remove unwanted directories
-        if except_dir in dirnames:
-            dirnames.remove(except_dir)
+        for bad_dir in except_dir:
+            if bad_dir in dirnames:
+                dirnames.remove(bad_dir)
 
         for filename in filenames:
             if re.search(except_file, str(filename)):
@@ -94,8 +95,8 @@ def get_clean_song_titles_from_spotify(df):
 FILENAME_STOPWORDS = ['bdrip', 'brrip', '1080p', '720p', 'aac'
                       'www', 'yifi', 'yts','anoxmous', 'bluray', 'hdtv'
                       'webrip', 'criterion', 'dvdrip', 'x264', 'xvid', 'gaz'
-                      'dm', 'kar', 'karaoke', 'version', 'jpp',
-                      'mix', 'remix', 'dj', 'nr', 'song', 'k'
+                      'dm', 'kar', 'karaoke', 'version', 'jpp', 'jk', 'mc'
+                      'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm'
                       ]
 
 
@@ -123,13 +124,8 @@ def reg_cleaner(string, allow_numbers=True):
 
 
 def remove_stopwords(string):
-    stop = ''
-    for stopword in FILENAME_STOPWORDS:
-        stop += str(stopword) + '|'
-    stop = stop[0:-1]
-    stopword_re = re.compile('(\s+)(' + stop + ')(\s+|$)')
-    remove_stopwords = stopword_re.sub(' ', string)
-    return remove_stopwords
+    removed_stopwords = ' '.join([word for word in string.split() if word not in FILENAME_STOPWORDS])
+    return removed_stopwords
 
 
 def remove_multi_spaces(string):
