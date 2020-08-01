@@ -92,11 +92,11 @@ def get_clean_song_titles_from_spotify(df):
     return df
 
 
-FILENAME_STOPWORDS = ['bdrip', 'brrip', '1080p', '720p', 'aac'
-                      'www', 'yifi', 'yts','anoxmous', 'bluray', 'hdtv'
-                      'webrip', 'criterion', 'dvdrip', 'x264', 'xvid', 'gaz'
-                      'dm', 'kar', 'karaoke', 'version', 'jpp', 'jk', 'mc'
-                      'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm'
+FILENAME_STOPWORDS = ['bdrip', 'brrip', '1080p', '720p', 'aac',
+                      'www', 'yifi', 'yts','anoxmous', 'bluray', 'hdtv', 'org', 'rcg', 'jh', 'rg2',
+                      'webrip', 'criterion', 'dvdrip', 'x264', 'xvid', 'gaz', 'bz2', 'da', 'dc', 'dwb', 'jc2',
+                      'dm', 'kar', 'karaoke', 'version', 'jpp', 'jk', 'mc', 'rt', 'gw', 'gc9', 'bb', 'gp', 'gl',
+                      'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm', 'v1', 'mw', 'rw', 'bz3', 'v2', 'fs'
                       ]
 
 

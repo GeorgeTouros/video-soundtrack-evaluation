@@ -58,7 +58,7 @@ def stopword_finder(string_list, n):
     for string in string_list:
         tokens = string.split()
         for token in tokens:
-            if len(token) < 5:
+            if len(token) < 4:
                 all_tokens.append(token)
     vocabulary.update(all_tokens)
     stopwords = vocabulary.most_common(n=n)
