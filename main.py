@@ -6,6 +6,9 @@ from paths import audio_path, video_path, midi_path
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
 
+# set pandas print_options for debugging purposes
+pd.options.display.width = 0
+
 if __name__ == '__main__':
     print('Catalog creation')
     script_start_time()
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     if mode in ["audio", "all"]:
         # continue with the audio files
         print('start audio catalog')
-        audio_catalog = create_catalog(audio_path, except_file=irrelevant_files)
+        audio_catalog = create_catalog(audio_path, except_file=irrelevant_files, except_dir=['Bootlegs'])
         audio_catalog = cleanup_file_titles(audio_catalog, "audio")
         audio_catalog = get_clean_song_titles_from_spotify(audio_catalog)
         audio_catalog.drop_duplicates(inplace=True)
@@ -76,13 +79,24 @@ if __name__ == '__main__':
         video_catalog.to_sql('video_catalog', con=db_connection, if_exists='replace')
         print('finish video catalog')
 
-    if mode in ['merge_video_audio', 'all']:
+    if mode in ['merge', 'all']:
+        print('Loading tables')
         midi = pd.read_sql_table('midi_catalog', con=db_connection)
         audio = pd.read_sql_table('audio_catalog', con=db_connection)
         pos_midi = midi[midi['spotify_name'].notna()]
         pos_audio = audio[audio['spotify_name'].notna()]
-        merge = pos_midi.merge(right=pos_audio, how='inner', on='spotify_name')
-        merge.drop_duplicates(subset='spotify_name', inplace=True)
+        print('keep matches and drop duplicates')
+        merge = pos_midi.merge(right=pos_audio, how='inner', on='spotify_URL', suffixes=('_midi', '_audio'))
+        merge.drop_duplicates(subset='spotify_URL', inplace=True)
+        print('write to db and dump to csv')
+        merge[['index_midi', 'index_audio']].to_sql('midi_audio_matches',
+                                                    con=db_connection,
+                                                    index=False,
+                                                    if_exists='replace')
+        merge.to_csv('var/midi_audio_matches.csv', index=False)
+
+    if mode in ['fingerprint', 'all']:
+        print('still work in progress')
 
     script_run_time()
 
