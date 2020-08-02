@@ -7,10 +7,15 @@ python-qbittorrent~=0.4.2
 beautifulsoup4~=4.9.0
 imdbpy~=6.8
 SQLAlchemy~=1.3.18
+# for this to work first run sudo apt-get install ffmpeg portaudio19-dev python3-pyaudio
 PyAudio
 pydub
+ffmpeg
 mysql-connector-python
 
 # for this to work first run sudo apt install python3-mysqldb
 # sudo apt-get install python3-dev default-libmysqlclient-dev build-essential
 mysqlclient
+
+
+PyDejavu
