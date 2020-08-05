@@ -1,8 +1,8 @@
 import os
 import re
-
+from shutil import copyfile
 import pandas as pd
-
+from paths import collected_data_path
 from spotify_wrapper.spotify import Spotify
 
 
@@ -49,7 +49,7 @@ def cleanup_file_titles(df, file_type, allow_numbers=False):
         # only keep relevant file types
         suf_search = re.search(suffix, filename)
         if suf_search:
-            #strip from suffix
+            # strip from suffix
             stripped = suf_search.group(1)
             words = reg_cleaner(stripped, allow_numbers=allow_numbers)
             titles.append(words)
@@ -94,7 +94,7 @@ def get_clean_song_titles_from_spotify(df):
 
 
 FILENAME_STOPWORDS = ['bdrip', 'brrip', '1080p', '720p', 'aac',
-                      'www', 'yifi', 'yts','anoxmous', 'bluray', 'hdtv', 'org', 'rcg', 'jh', 'rg2',
+                      'www', 'yifi', 'yts', 'anoxmous', 'bluray', 'hdtv', 'org', 'rcg', 'jh', 'rg2',
                       'webrip', 'criterion', 'dvdrip', 'x264', 'xvid', 'gaz', 'bz2', 'da', 'dc', 'dwb', 'jc2',
                       'dm', 'kar', 'karaoke', 'version', 'jpp', 'jk', 'mc', 'rt', 'gw', 'gc9', 'bb', 'gp', 'gl',
                       'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm', 'v1', 'mw', 'rw', 'bz3', 'v2', 'fs'
@@ -133,3 +133,50 @@ def remove_multi_spaces(string):
     multiple_spaces = re.compile('(\s\s+)')
     stripped_string = re.sub(multiple_spaces, ' ', string)
     return stripped_string
+
+
+def get_match_ids(midi_id, audio_id):
+    index = 'M' + str(midi_id) + 'A' + str(audio_id)
+    return index
+
+
+def setup_collection_directory():
+    new_dir = collected_data_path
+    oldmask = os.umask(000)
+    new_midi_dir = new_dir + '/midi'
+    new_audio_dir = new_dir + '/audio'
+    new_video_dir = new_dir + '/video'
+    os.makedirs(new_midi_dir, exist_ok=True, mode=0o755)
+    os.makedirs(new_audio_dir, exist_ok=True, mode=0o755)
+    os.makedirs(new_video_dir, exist_ok=True, mode=0o755)
+    os.umask(oldmask)
+    return new_midi_dir, new_audio_dir, new_video_dir
+
+
+def collect_matched_files(row, new_midi_path, new_audio_path):
+    midi_path = row['directory_midi']
+    midi_file_name = row['filename_midi']
+    midi_index = row['index_midi']
+    audio_index = row['index_audio']
+    audio_path = row['directory_audio']
+    audio_file_name = row['filename_audio']
+    pair_id = get_match_ids(midi_index, audio_index)
+
+    new_midi_name = get_new_file_name(midi_file_name, pair_id)
+    complete_source_file_path = midi_path + '/' + midi_file_name
+    complete_destination_file_path = new_midi_path + '/' + new_midi_name
+    copyfile(complete_source_file_path, complete_destination_file_path)
+    print('file ' + complete_source_file_path + ' copied sucessfully as ' + complete_destination_file_path)
+
+    new_audio_name = get_new_file_name(audio_file_name, pair_id)
+    complete_source_file_path = audio_path + '/' + audio_file_name
+    complete_destination_file_path = new_audio_path + '/' + new_audio_name
+    copyfile(complete_source_file_path, complete_destination_file_path)
+    print('file ' + complete_source_file_path + ' copied sucessfully as ' + complete_destination_file_path)
+
+    return pair_id
+
+
+def get_new_file_name(old_file_name, pair_id):
+    new_name = str(pair_id) + '_' + str(old_file_name)
+    return new_name
