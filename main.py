@@ -2,10 +2,18 @@ import re
 import pandas as pd
 from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_match_ids, setup_collection_directory
 from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files
+from mysql.connector.errors import ProgrammingError
 from common import script_start_time, script_run_time
 from paths import audio_path, video_path, midi_path
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
+try:
+    from fingerprinting import djv
+except ProgrammingError:
+    db = DatabaseHandler()
+    db.create_db('dejavu')
+    from fingerprinting import djv
+
 
 # set pandas print_options for debugging purposes
 pd.options.display.width = 0
@@ -13,21 +21,10 @@ pd.options.display.width = 0
 if __name__ == '__main__':
     print('Catalog creation')
     script_start_time()
-    # Each midi file also has an indexing file that starts with .-
-    # We remove those
-    irrelevant_midi = re.compile('\._|\.DS_Store')
-    irrelevant_dir = ['lmd_matched', 'cariart', 'download-midi']
-    # we also remove the windows hidden files
+    # we will remove the windows hidden files
     irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 
-    try:
-        db = DatabaseHandler('file_system_catalogs')
-    except exc.OperationalError:
-        db = DatabaseHandler()
-        db.create_db('file_system_catalogs')
-        db = DatabaseHandler('file_system_catalogs')
 
-    db_connection = db.connection
 
     print("""How do you want to run the pipeline? Choose one of the modes below
     all
@@ -40,9 +37,23 @@ if __name__ == '__main__':
 
     mode = input()
 
+    if mode != 'fingerprint':
+        try:
+            db = DatabaseHandler('file_system_catalogs')
+        except exc.OperationalError:
+            db = DatabaseHandler()
+            db.create_db('file_system_catalogs')
+            db = DatabaseHandler('file_system_catalogs')
+
+        db_connection = db.connection
+
     if mode in ["midi", "all"]:
         # start with the midi files
         print('start midi catalog')
+        # Each midi file also has an indexing file that starts with .-
+        # We remove those
+        irrelevant_midi = re.compile('\._|\.DS_Store')
+        irrelevant_dir = ['lmd_matched', 'cariart', 'download-midi']
         midi_catalog = create_catalog(midi_path, irrelevant_dir, irrelevant_midi)
         print('finish initial midi catalog')
 
@@ -102,6 +113,17 @@ if __name__ == '__main__':
         merged.to_csv('var/midi_audio_matches.csv', index=False)
 
     if mode in ['fingerprint', 'all']:
-        print('still work in progress')
+        try:
+            db = DatabaseHandler('dejavu')
+        except exc.ProgrammingError:
+            db = DatabaseHandler()
+            db.create_db('dejavu')
+            db = DatabaseHandler('dejavu')
+
+        db_connection = db.connection
+
+        new_midi_dir, new_audio_dir, new_video_dir = setup_collection_directory()
+        print("start making fingerprints")
+        djv.get_fingerprints_from_directory(new_audio_dir, ['mp3', 'MP3'])
 
     script_run_time()

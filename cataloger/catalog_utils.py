@@ -142,10 +142,10 @@ def get_match_ids(midi_id, audio_id):
 
 def setup_collection_directory():
     new_dir = collected_data_path
-    oldmask = os.umask(000)
     new_midi_dir = new_dir + '/midi'
     new_audio_dir = new_dir + '/audio'
     new_video_dir = new_dir + '/video'
+    oldmask = os.umask(000)
     os.makedirs(new_midi_dir, exist_ok=True, mode=0o755)
     os.makedirs(new_audio_dir, exist_ok=True, mode=0o755)
     os.makedirs(new_video_dir, exist_ok=True, mode=0o755)
