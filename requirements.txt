@@ -17,11 +17,12 @@ ffmpeg
 mysql-connector-python==8.0.17
 
 # for this to work first run sudo apt install python3-mysqldb
-# sudo apt-get install python3-dev default-libmysqlclient-dev build-essential
+# sudo apt-get install python3.7-dev default-libmysqlclient-dev build-essential
 # sudo apt-get install libfreetype6-dev
 mysqlclient
 
 
-# https://github.com/worldveil/dejavu/zipball/master
-
 psycopg2-binary
+
+# pip install https://github.com/worldveil/dejavu/zipball/master --no-deps
+
