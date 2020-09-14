@@ -30,7 +30,7 @@ def extract_audio_chunks_from_video(video_file, chunk_size=CHUNK_SIZE):
 
 def parse_recognition_results(dejavu_results):
     song_id = dejavu_results['song_id']
-    song_name = str(dejavu_results['song_name'])
+    song_name = str(dejavu_results['song_name'], 'utf-8')
     input_confidence = dejavu_results['input_confidence']
     offset = dejavu_results['offset']
     offset_seconds = dejavu_results['offset_seconds']
@@ -64,6 +64,34 @@ def find_songs_in_temp_dir():
     return songs
 
 
+def needs_smoothing(prev_chunk_label, next_chunk_label):
+    if prev_chunk_label == next_chunk_label:
+        return True
+    else:
+        return False
+
+
+def smooth_chunk_offset(prev_offset, next_offset):
+    smooth_offset = (next_offset - prev_offset) / 2
+    return smooth_offset
+
+
+def smooth_chunk_matches(chunk_match_data):
+    chunk_label = chunk_match_data['song_id']
+    chunk_offset = chunk_match_data['offset']
+    prev_chunk_label = chunk_match_data['prev_song']
+    prev_offset = chunk_match_data['prev_offset']
+    next_chunk_label = chunk_match_data['next_song']
+    next_offset = chunk_match_data['next_offset']
+    if needs_smoothing(prev_chunk_label, next_chunk_label):
+        return prev_chunk_label, smooth_chunk_offset(prev_offset, next_offset)
+    else:
+        return chunk_label, chunk_offset
+
+
+# TODO: Compare the mode of the offset_seconds column for consecutive matched chunks, with the chunk_siza
+# TODO: Combine the matched chunks into one and crop the video in the appropriate timestamps
+
 # these boots are made for walking should be on minute 45 of this film
 #film_audio = AudioSegment.from_file(
 #    r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4",
@@ -79,10 +107,19 @@ def find_songs_in_temp_dir():
 if __name__ == '__main__':
     #test_file_path = r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4"
     #extract_audio_chunks_from_video(test_file_path, 5*1000)
-    matches = find_songs_in_temp_dir()
-    os.chdir("../var/")
-    match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-                                                           'song_name', 'input_confidence', 'offset', 'offset_seconds'])
+    #matches = find_songs_in_temp_dir()
+    #os.chdir("../var/")
+    #match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
+    #                                                       'song_name', 'input_confidence', 'offset', 'offset_seconds'])
+    match_df = pd.read_csv('../var/test_fingerprints.csv')
+    match_df.sort_values(by='start', inplace=True)
+    match_df['prev_song'] = match_df['song_id'].shift(1)
+    match_df['prev_offset'] = match_df['offset'].shift(1)
+    match_df['next_song'] = match_df['song_id'].shift(-1)
+    match_df['next_offset'] = match_df['offset'].shift(-1)
+
+    match_df['smooth_song_id'], match_df['smooth_song_label'] = zip(*match_df.apply(func=smooth_chunk_matches, axis=1))
+
     match_df.to_csv('test_fingerprints.csv', index=False)
     print('Done')
     # res = ask_dejavu(temp_dir+'vid_chunk__2730000__2760000.mp3')
