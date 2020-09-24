@@ -1,5 +1,5 @@
 from pydub import AudioSegment
-from pydub.playback import play
+from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from fingerprinting.djv import ask_dejavu
 from paths import temp_dir
 import pandas as pd
@@ -154,36 +154,36 @@ def get_match_area_mode(match_area):
 
 
 def get_true_positives(df):
-    filter_df = df[df['match_ids'].notna()]
-    grouped_df = filter_df.groupby('match_ids')['offset_diff']
+    filter_df = df[df['match_id'].notna()]
+    grouped_df = filter_df.groupby('match_id')['offset_diff']
     modes = grouped_df.apply(get_match_area_mode)
     tp = modes[modes.notna()].index.values
-    tp_df = df[df['match_ids'].isin(tp)]
+    tp_df = df[df['match_id'].isin(tp)]
     return tp_df
 
 
-# TODO: Combine the matched chunks into one and crop the video in the appropriate timestamps
-
-# these boots are made for walking should be on minute 45 of this film
-#film_audio = AudioSegment.from_file(
-#    r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4",
-#    "mp4")
-
-#ask_dejavu(chunk)
+def get_crop_timestamps(df):
+    tims = df.groupby(by=['match_id', 'song_id']).agg({'start': "min", "end": "max"})
+    tims.reset_index(inplace=True)
+    return tims
 
 
-# save = mp4_version.export(r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/AUDIOFull.Metal.Jacket.1987.720p.BrRip.YIFY.mp3",
-#                          format="mp3")
+def crop_video_to_matches(trim_df, video_path, target_folder):
+    start_times = trim_df['start']
+    end_times = trim_df['end']
+    for start_time in start_times:
+        for end_time in end_times:
+            ffmpeg_extract_subclip(video_path, start_time/1000, end_time/1000, targetname=target_folder+'match.mp4')
 
 
 if __name__ == '__main__':
-    #test_file_path = r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4"
-    #extract_audio_chunks_from_video(test_file_path, 5*1000)
-    #matches = find_songs_in_temp_dir()
-    #match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-    #                                                       'song_name', 'input_confidence', 'offset', 'offset_seconds'])
-    #match_df.sort_values(by='start', inplace=True)
-    #match_df.to_csv('../var/test_fingerprints.csv', index=False)
+    test_file_path = r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4"
+    extract_audio_chunks_from_video(test_file_path, 5*1000)
+    matches = find_songs_in_temp_dir()
+    match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
+                                                           'song_name', 'input_confidence', 'offset', 'offset_seconds'])
+    match_df.sort_values(by='start', inplace=True)
+    match_df.to_csv('../var/test_fingerprints.csv', index=False)
     match_df = pd.read_csv('../var/test_fingerprints.csv')
     match_df.sort_values(by='start', inplace=True)
     match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
@@ -195,8 +195,10 @@ if __name__ == '__main__':
     match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
     match_df.sort_values(by='start', inplace=True)
     match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
-    match_df['match_ids'] = create_match_ids(match_df['match_tag'].values)
+    match_df['match_id'] = create_match_ids(match_df['match_tag'].values)
     match_df = get_true_positives(match_df)
+    trimmer_df = get_crop_timestamps(match_df)
+    crop_video_to_matches(trimmer_df, test_file_path, '../var/')
     match_df.to_csv('../var/test_smoothing.csv', index=False)
     print('Done')
     # res = ask_dejavu(temp_dir+'vid_chunk__2730000__2760000.mp3')
