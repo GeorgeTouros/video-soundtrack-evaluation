@@ -1,10 +1,10 @@
 import re
 import pandas as pd
-from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_match_ids, setup_collection_directory
-from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files
+from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_audio_midi_match_ids, setup_collection_directory
+from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
 from mysql.connector.errors import ProgrammingError
 from common import script_start_time, script_run_time
-from paths import audio_path, video_path, midi_path
+from paths import audio_path, video_path, midi_path, collected_data_path, temp_dir
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
 try:
@@ -13,6 +13,11 @@ except ProgrammingError:
     db = DatabaseHandler()
     db.create_db('dejavu')
     from fingerprinting import djv
+from media_manipulation.video_stream import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
+    get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
+from media_manipulation.video_stream import create_match_ids_per_video_segment, get_true_positives, get_crop_timestamps, \
+    crop_video_to_matches, purge_temp_folder
+
 
 
 # set pandas print_options for debugging purposes
@@ -87,8 +92,9 @@ if __name__ == '__main__':
         video_catalog = create_catalog(video_path, except_file=irrelevant_files)
         video_catalog = cleanup_file_titles(video_catalog, "video", allow_numbers=True)
         # video_catalog = get_clean_video_titles(video_catalog)
+        video_catalog['full_path'] = video_catalog['directory'] + video_catalog['filename']
         video_catalog.to_csv(r'var/video_catalog.csv', index=False)
-        video_catalog.to_sql('video_catalog', con=db_connection, if_exists='replace')
+        video_catalog.to_sql('video_catalog', con=db_connection, if_exists='replace', index=True, index_label='id')
         print('finish video catalog')
 
     if mode in ['merge', 'all']:
@@ -124,6 +130,37 @@ if __name__ == '__main__':
 
         new_midi_dir, new_audio_dir, new_video_dir = setup_collection_directory()
         print("start making fingerprints")
-        djv.get_fingerprints_from_directory(new_audio_dir, ['mp3', 'MP3'])
+        djv.get_fingerprints_from_directory(new_audio_dir, ['mp3', 'MP3'], 3)
+
+    if mode in ['clip_finder', 'all']:
+        video_paths = pd.read_sql_table('video_catalog', con=db_connection)
+
+        for video_id in video_paths['id'].values:
+            video_path = video_paths[video_paths['id'] == video_id]['full_path']
+            file_type = video_paths[video_paths['id'] == video_id]['file_type']
+            extract_audio_chunks_from_video(video_path, 5 * 1000, file_type)
+            matches = find_songs_in_temp_dir()
+            match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
+                                                                   'song_name', 'input_confidence', 'offset',
+                                                                   'offset_seconds'])
+            match_df.sort_values(by='start', inplace=True)
+            match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
+            match_df.sort_values(by='start', inplace=True)
+            match_df['song_id'], match_df['offset_seconds'] = zip(*match_df.apply(func=smooth_chunk_matches, axis=1))
+            match_df.sort_values(by='start', inplace=True)
+            match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
+            match_df.sort_values(by='start', inplace=True)
+            match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
+            match_df.sort_values(by='start', inplace=True)
+            match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
+            match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
+            match_df = get_true_positives(match_df)
+            trimmer_df = get_crop_timestamps(match_df)
+            trimmer_df['video_audio_match_id'] = trimmer_df['song_id'].apply(get_video_audio_match_ids, args=video_id)
+            trimmer_df['video_type'] = file_type
+            crop_video_to_matches(trimmer_df, video_path, collected_data_path + 'video/')
+            trimmer_df.to_sql('audio_video_matches', con=db_connection, index=False, if_exists='append')
+            purge_temp_folder(temp_dir)
+            print('Completed work for ' + video_path)
 
     script_run_time()
