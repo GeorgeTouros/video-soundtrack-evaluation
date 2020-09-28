@@ -26,3 +26,5 @@ psycopg2-binary
 
 # pip install https://github.com/worldveil/dejavu/zipball/master --no-deps
 
+
+moviepy~=1.0.3

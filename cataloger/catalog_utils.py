@@ -36,15 +36,16 @@ def create_catalog(directory, except_dir=[], except_file=''):
 
 def cleanup_file_titles(df, file_type, allow_numbers=False):
     """
-    get the titles of the midi files and return a DataFrame with them
+    get the titles of a file and return a DataFrame with a title column and a filetype column
     :param allow_numbers: boolean that passes to the regex cleaner function and allows numbers in the output.
     :param df: the midi track catalogue
     :param file_type: the type of files in the catalogue. Possible values: "audio", "video", "midi"
-    :return: df with an extra column with titles
+    :return: df with an extra column with titles and file type
     """
     suffix = determine_relevant_suffices(file_type)
 
     titles = []
+    file_types = []
     for filename in df['filename']:
         # only keep relevant file types
         suf_search = re.search(suffix, filename)
@@ -53,10 +54,14 @@ def cleanup_file_titles(df, file_type, allow_numbers=False):
             stripped = suf_search.group(1)
             words = reg_cleaner(stripped, allow_numbers=allow_numbers)
             titles.append(words)
+            suf = suf_search.group(2).strip(".")
+            file_types.append(suf)
         else:
             titles.append('')
+            file_types.append('')
 
     df['title'] = titles
+    df['file_type'] = file_types
     df = df[df['title'] != '']
     return df
 
@@ -135,8 +140,13 @@ def remove_multi_spaces(string):
     return stripped_string
 
 
-def get_match_ids(midi_id, audio_id):
+def get_audio_midi_match_ids(midi_id, audio_id):
     index = 'M' + str(midi_id) + 'A' + str(audio_id)
+    return index
+
+
+def get_video_audio_match_ids(audio_id, video_id):
+    index = "V" + str(video_id) + "A" + str(audio_id)
     return index
 
 
@@ -160,7 +170,7 @@ def collect_matched_files(row, new_midi_path, new_audio_path):
     audio_index = row['index_audio']
     audio_path = row['directory_audio']
     audio_file_name = row['filename_audio']
-    pair_id = get_match_ids(midi_index, audio_index)
+    pair_id = get_audio_midi_match_ids(midi_index, audio_index)
 
     new_midi_name = get_new_file_name(midi_file_name, pair_id)
     complete_source_file_path = midi_path + '/' + midi_file_name

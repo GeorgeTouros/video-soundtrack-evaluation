@@ -11,11 +11,10 @@ from statistics import StatisticsError
 CHUNK_SIZE = 30 * 1000  # ms
 
 
-def extract_audio_chunks_from_video(video_file, chunk_size=CHUNK_SIZE):
+def extract_audio_chunks_from_video(video_file, chunk_size=CHUNK_SIZE, file_type="mp4"):
     print('Loading file')
-    audio = AudioSegment.from_file(video_file, "mp4")
+    audio = AudioSegment.from_file(video_file, file_type)
     audio = audio.set_frame_rate(44100)
-    # TODO: Add multiple file extension functionality
     chunk_index = 0
     for chunk in audio[::chunk_size]:
         file_name = 'vid_chunk__' + str(chunk_index) + '__' + str(chunk_index + chunk_size) + '.mp3'
@@ -132,7 +131,7 @@ def calculate_offset_diff(chunk_match_data):
         return None
 
 
-def create_match_ids(tags):
+def create_match_ids_per_video_segment(tags):
     match_id = 0
     match_ids = []
     for tag in tags:
@@ -171,19 +170,30 @@ def get_crop_timestamps(df):
 def crop_video_to_matches(trim_df, video_path, target_folder):
     start_times = trim_df['start']
     end_times = trim_df['end']
+    target_ids = trim_df['video_audio_match_id']
+    file_types = trim_df['file_type']
     for start_time in start_times:
         for end_time in end_times:
-            ffmpeg_extract_subclip(video_path, start_time/1000, end_time/1000, targetname=target_folder+'match.mp4')
+            for target_id in target_ids:
+                for file_type in file_types:
+                    ffmpeg_extract_subclip(video_path, start_time/1000, end_time/1000,
+                                           targetname=target_folder+target_id+file_type)
 
+
+def purge_temp_folder(temp_folder):
+    for filename in os.listdir(temp_folder):
+        file_path = os.path.join(temp_folder, filename)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
 
 if __name__ == '__main__':
     test_file_path = r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4"
-    extract_audio_chunks_from_video(test_file_path, 5*1000)
-    matches = find_songs_in_temp_dir()
-    match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-                                                           'song_name', 'input_confidence', 'offset', 'offset_seconds'])
-    match_df.sort_values(by='start', inplace=True)
-    match_df.to_csv('../var/test_fingerprints.csv', index=False)
+    #extract_audio_chunks_from_video(test_file_path, 5*1000)
+    #matches = find_songs_in_temp_dir()
+    #match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
+    #                                                       'song_name', 'input_confidence', 'offset', 'offset_seconds'])
+    #match_df.sort_values(by='start', inplace=True)
+    #match_df.to_csv('../var/test_fingerprints.csv', index=False)
     match_df = pd.read_csv('../var/test_fingerprints.csv')
     match_df.sort_values(by='start', inplace=True)
     match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
@@ -195,7 +205,7 @@ if __name__ == '__main__':
     match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
     match_df.sort_values(by='start', inplace=True)
     match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
-    match_df['match_id'] = create_match_ids(match_df['match_tag'].values)
+    match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
     match_df = get_true_positives(match_df)
     trimmer_df = get_crop_timestamps(match_df)
     crop_video_to_matches(trimmer_df, test_file_path, '../var/')
