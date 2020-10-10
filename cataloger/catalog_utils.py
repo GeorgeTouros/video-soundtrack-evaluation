@@ -150,8 +150,7 @@ def get_video_audio_match_ids(audio_id, video_id):
     return index
 
 
-def setup_collection_directory():
-    new_dir = collected_data_path
+def setup_collection_directory(new_dir=collected_data_path):
     new_midi_dir = new_dir + '/midi'
     new_audio_dir = new_dir + '/audio'
     new_video_dir = new_dir + '/video'
@@ -161,6 +160,19 @@ def setup_collection_directory():
     os.makedirs(new_video_dir, exist_ok=True, mode=0o755)
     os.umask(oldmask)
     return new_midi_dir, new_audio_dir, new_video_dir
+
+
+def get_collection_directory(data_type):
+    """
+    retrieve the collection directory for the specific data type
+    :param data_type: either one of audio, video or midi
+    :return: the directory
+    """
+    if data_type in ['audio', 'midi', 'video']:
+        dir = collected_data_path + '/' + str(data_type)
+        return dir
+    else:
+        raise ValueError('not acceptable data type')
 
 
 def collect_matched_files(row, new_midi_path, new_audio_path):
@@ -190,3 +202,9 @@ def collect_matched_files(row, new_midi_path, new_audio_path):
 def get_new_file_name(old_file_name, pair_id):
     new_name = str(pair_id) + '_' + str(old_file_name)
     return new_name
+
+
+def check_if_all_files_in_temp_dir(original_file_dir, temp_file_dir):
+    old_files = os.listdir(original_file_dir)
+    temp_files = os.listdir(temp_file_dir)
+    return set(old_files) == set(temp_files)

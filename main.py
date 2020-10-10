@@ -2,11 +2,13 @@ import re
 import pandas as pd
 from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_audio_midi_match_ids, setup_collection_directory
 from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
+from cataloger.catalog_utils import get_collection_directory, check_if_all_files_in_temp_dir
 from mysql.connector.errors import ProgrammingError
 from common import script_start_time, script_run_time
-from paths import audio_path, video_path, midi_path, collected_data_path, temp_dir
+from paths import audio_path, video_path, midi_path, collected_data_path, temp_dir, local_temp_dir
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
+from media_manipulation.audio_conversions import copy_and_convert_dir
 try:
     from fingerprinting import djv
 except ProgrammingError:
@@ -128,9 +130,14 @@ if __name__ == '__main__':
 
         db_connection = db.connection
 
-        new_midi_dir, new_audio_dir, new_video_dir = setup_collection_directory()
+        collected_audio_dir = get_collection_directory('audio')
+        local_midi_temp_dir, local_audio_temp_dir, local_video_temp_dir = setup_collection_directory(new_dir=local_temp_dir)
+        if not check_if_all_files_in_temp_dir(collected_audio_dir, local_audio_temp_dir):
+            print("converting to lower quality mono file")
+            copy_and_convert_dir(collected_audio_dir, local_audio_temp_dir)
+
         print("start making fingerprints")
-        djv.get_fingerprints_from_directory(new_audio_dir, ['mp3', 'MP3'], 3)
+        djv.get_fingerprints_from_directory(local_audio_temp_dir, ['mp3', 'MP3'], 3)
 
     if mode in ['clip_finder', 'all']:
         video_paths = pd.read_sql_table('video_catalog', con=db_connection)
