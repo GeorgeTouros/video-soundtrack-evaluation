@@ -7,6 +7,7 @@ import csv
 from collections import Counter
 
 
+
 def wait_for_file(file_path):
     while not os.path.exists(file_path):
         time.sleep(1)
@@ -63,3 +64,9 @@ def stopword_finder(string_list, n):
     vocabulary.update(all_tokens)
     stopwords = vocabulary.most_common(n=n)
     return stopwords
+
+
+CHUNK_SIZE = 30 * 1000  # ms
+SAMPLE_RATE = 32000
+CHANNELS = 1
+BATCH_SIZE = 100

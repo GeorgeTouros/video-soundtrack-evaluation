@@ -1,20 +1,27 @@
-from pydub import AudioSegment
+from common import CHUNK_SIZE, SAMPLE_RATE, CHANNELS
+from media_manipulation import audio_conversions
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from fingerprinting.djv import ask_dejavu
-from paths import temp_dir
+from cataloger.catalog_utils import get_temp_directory
 import pandas as pd
 import re
 import os
 from statistics import mode
 from statistics import StatisticsError
 
-CHUNK_SIZE = 30 * 1000  # ms
-
 
 def extract_audio_chunks_from_video(video_file, chunk_size=CHUNK_SIZE, file_type="mp4"):
+    temp_dir = get_temp_directory('video')
     print('Loading file')
-    audio = AudioSegment.from_file(video_file, file_type)
-    audio = audio.set_frame_rate(44100)
+    temp_file_name = temp_dir+'full_film.mp3'
+    audio = audio_conversions.load_and_convert_with_ffmpeg(video_file,
+                                                           temp_file_name,
+                                                           sample_rate=SAMPLE_RATE,
+                                                           channels=CHANNELS)
+    # ffmpeg_extract_audio(video_file, temp_file_name, bitrate=16000, fps=8000)
+    # print('Converting to suitable format')
+    # audio = audio_conversions.load_and_convert_stereo_to_mono_8k(temp_file_name, format='mp3')
+    print('chunking')
     chunk_index = 0
     for chunk in audio[::chunk_size]:
         file_name = 'vid_chunk__' + str(chunk_index) + '__' + str(chunk_index + chunk_size) + '.mp3'
@@ -47,21 +54,25 @@ def parse_timestamps_from_chunk_name(chunk_name):
 
 
 def find_songs_in_temp_dir():
+    temp_dir = get_temp_directory('video')
     songs = []
     for chunk in os.listdir(temp_dir):
-        result = ask_dejavu(temp_dir+chunk)
-        print(chunk)
-        try:
-            if result['results'][0]['input_confidence'] < 0.2:
+        if "chunk" in str(chunk):
+            result = ask_dejavu(temp_dir+chunk)
+            print(chunk)
+            try:
+                if result['results'][0]['input_confidence'] < 0.1:
+                    print('Nothing')
+                else:
+                    match = result['results'][0]
+                    print(match)
+                    song_id, song_name, input_confidence, offset, offset_seconds = parse_recognition_results(match)
+                    start, end = parse_timestamps_from_chunk_name(chunk)
+                    songs.append((chunk, start, end, song_id, song_name, input_confidence, offset, offset_seconds))
+            except IndexError:
                 print('Nothing')
-            else:
-                match = result['results'][0]
-                print(match)
-                song_id, song_name, input_confidence, offset, offset_seconds = parse_recognition_results(match)
-                start, end = parse_timestamps_from_chunk_name(chunk)
-                songs.append((chunk, start, end, song_id, song_name, input_confidence, offset, offset_seconds))
-        except IndexError:
-            print('Nothing')
+        else:
+            continue
     return songs
 
 
