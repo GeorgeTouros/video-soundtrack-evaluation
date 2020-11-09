@@ -3,12 +3,13 @@ import os
 import subprocess
 
 
-def load_and_convert_with_ffmpeg(audio_file, output, sample_rate=8000, channels=1):
-    call = "ffmpeg -i {input} -ar {sample_rate} -f 'mp3' -ac {channels} {output}"
+def load_and_convert_with_ffmpeg(audio_file, output, sample_rate=8000, channels=1, file_type='mp3'):
+    call = "ffmpeg -y -i {input} -sn -ar {sample_rate} -f {file_type} -ac {channels} {output}"
     data = {'input': """\"""" + str(audio_file) + """\"""",
             'channels': channels,
             'sample_rate': sample_rate,
-            'output': """\"""" + str(output) + """\""""}
+            'output': """\"""" + str(output) + """\"""",
+            'file_type': file_type}
     subprocess.call(call.format(**data), shell=True)
     loaded = AudioSegment.from_file(output)
     return loaded
@@ -36,7 +37,9 @@ def copy_and_convert_dir(in_dir, out_dir, sample_rate=8000, channels=1):
         load_and_convert_with_ffmpeg(file, new_output_name, sample_rate=sample_rate, channels=channels)
 
 
-def copy_and_convert_files_list(files_list, out_dir, sample_rate=8000, channels=1):
+def copy_and_convert_files_list(files_list, out_dir, sample_rate=8000, channels=1, file_type='mp3'):
     for file in files_list:
-        new_output_name = out_dir+file
-        load_and_convert_with_ffmpeg(file, new_output_name, sample_rate=sample_rate, channels=channels)
+        file_stripped = file[:-3]
+        new_output_name = out_dir+file_stripped+file_type
+        load_and_convert_with_ffmpeg(file, new_output_name,
+                                     sample_rate=sample_rate, channels=channels, file_type=file_type)

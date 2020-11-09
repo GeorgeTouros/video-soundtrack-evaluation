@@ -1,10 +1,10 @@
 #!/bin/bash
-echo "Starting mofo python scripts"
+echo "Starting running python scripts"
 source /home/zappatistas20/PycharmProjects/venvs/thesis_dataset_creation/bin/activate
 TEMPDIR=/home/zappatistas20/PycharmProjects/thesis_dataset_creation/temp/audio/
 cd $TEMPDIR;
-COUNTER=0
-while [ $COUNTER -le 31 ]
+COUNTER=$1
+while [ $COUNTER -le $2 ]
 do
 	FOLD1="${TEMPDIR}audio_${COUNTER}"
 	INCR=$((COUNTER+1))

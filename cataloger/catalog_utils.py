@@ -145,7 +145,7 @@ def get_audio_midi_match_ids(midi_id, audio_id):
 
 
 def get_video_audio_match_ids(audio_id, video_id):
-    index = "V" + str(video_id) + "A" + str(audio_id)
+    index = "V" + str(int(video_id)) + "A" + str(int(audio_id))
     return index
 
 
