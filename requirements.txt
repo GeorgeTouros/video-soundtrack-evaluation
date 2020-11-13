@@ -13,7 +13,7 @@ matplotlib==3.1.1
 # for this to work first run sudo apt-get install ffmpeg portaudio19-dev python3-pyaudio
 PyAudio
 pydub==0.23.1
-ffmpeg
+ffmpeg-python
 mysql-connector-python==8.0.17
 
 # for this to work first run sudo apt install python3-mysqldb
@@ -26,3 +26,5 @@ psycopg2-binary
 
 # pip install https://github.com/worldveil/dejavu/zipball/master --no-deps
 
+
+moviepy~=1.0.3

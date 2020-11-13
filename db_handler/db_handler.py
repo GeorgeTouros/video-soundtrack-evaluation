@@ -66,6 +66,41 @@ class DatabaseHandler(object):
         else:
             print('A database already exists with that name')
 
+    def update_value(self, table_name, column_name, value, where):
+        """
+        Updates a table with a given value based on column name and a where clause
+        :param table_name:
+        :param column_name:
+        :param value:
+        :param where:
+        """
+        update = "UPDATE {}\n".format(table_name)
+        set_command = "SET {} = {}\n".format(column_name, value)
+        where_clause = "WHERE {};".format(where)
+        self.connection.execute(update+set_command+where_clause)
+
+    def execute_from_file(self, filepath):
+        """
+        reads a file with sql code and executes it
+        :param filepath:
+        :return:
+        """
+        with open(filepath) as query_file:
+            query = query_file.read()
+            self.connection.execute(str(query))
+
+    def check_for_existing_tables(self, table):
+        """
+        Checks the available tables in a MySQL db
+        :return: a list of the existing dbs
+        """
+        existing_tables = self.connection.execute("SHOW TABLES;")
+        existing_tables = [d[0] for d in existing_tables]
+        if table in existing_tables:
+            return True
+        else:
+            return False
+
     def close(self):
         self.connection.close()
 

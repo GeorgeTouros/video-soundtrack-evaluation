@@ -2,9 +2,9 @@ import os
 import re
 from shutil import copyfile
 import pandas as pd
-from paths import collected_data_path
+from paths import collected_data_path, local_temp_dir
 from spotify_wrapper.spotify import Spotify
-
+from math import ceil
 
 def create_catalog(directory, except_dir=[], except_file=''):
     """
@@ -21,7 +21,6 @@ def create_catalog(directory, except_dir=[], except_file=''):
         for bad_dir in except_dir:
             if bad_dir in dirnames:
                 dirnames.remove(bad_dir)
-
         for filename in filenames:
             if re.search(except_file, str(filename)):
                 filenames.remove(filename)
@@ -36,15 +35,16 @@ def create_catalog(directory, except_dir=[], except_file=''):
 
 def cleanup_file_titles(df, file_type, allow_numbers=False):
     """
-    get the titles of the midi files and return a DataFrame with them
+    get the titles of a file and return a DataFrame with a title column and a filetype column
     :param allow_numbers: boolean that passes to the regex cleaner function and allows numbers in the output.
     :param df: the midi track catalogue
     :param file_type: the type of files in the catalogue. Possible values: "audio", "video", "midi"
-    :return: df with an extra column with titles
+    :return: df with an extra column with titles and file type
     """
     suffix = determine_relevant_suffices(file_type)
 
     titles = []
+    file_types = []
     for filename in df['filename']:
         # only keep relevant file types
         suf_search = re.search(suffix, filename)
@@ -53,10 +53,14 @@ def cleanup_file_titles(df, file_type, allow_numbers=False):
             stripped = suf_search.group(1)
             words = reg_cleaner(stripped, allow_numbers=allow_numbers)
             titles.append(words)
+            suf = suf_search.group(2).strip(".")
+            file_types.append(suf)
         else:
             titles.append('')
+            file_types.append('')
 
     df['title'] = titles
+    df['file_type'] = file_types
     df = df[df['title'] != '']
     return df
 
@@ -135,22 +139,39 @@ def remove_multi_spaces(string):
     return stripped_string
 
 
-def get_match_ids(midi_id, audio_id):
+def get_audio_midi_match_ids(midi_id, audio_id):
     index = 'M' + str(midi_id) + 'A' + str(audio_id)
     return index
 
 
-def setup_collection_directory():
-    new_dir = collected_data_path
-    new_midi_dir = new_dir + '/midi'
-    new_audio_dir = new_dir + '/audio'
-    new_video_dir = new_dir + '/video'
+def get_video_audio_match_ids(audio_id, video_id):
+    index = "V" + str(int(video_id)) + "A" + str(int(audio_id))
+    return index
+
+
+def setup_collection_directory(new_dir=collected_data_path):
+    new_midi_dir = new_dir + 'midi/'
+    new_audio_dir = new_dir + 'audio/'
+    new_video_dir = new_dir + 'video/'
     oldmask = os.umask(000)
     os.makedirs(new_midi_dir, exist_ok=True, mode=0o755)
     os.makedirs(new_audio_dir, exist_ok=True, mode=0o755)
     os.makedirs(new_video_dir, exist_ok=True, mode=0o755)
     os.umask(oldmask)
     return new_midi_dir, new_audio_dir, new_video_dir
+
+
+def get_collection_directory(data_type):
+    """
+    retrieve the collection directory for the specific data type
+    :param data_type: either one of audio, video or midi
+    :return: the directory
+    """
+    if data_type in ['audio', 'midi', 'video']:
+        dir = collected_data_path + str(data_type)
+        return dir
+    else:
+        raise ValueError('not acceptable data type')
 
 
 def collect_matched_files(row, new_midi_path, new_audio_path):
@@ -160,7 +181,7 @@ def collect_matched_files(row, new_midi_path, new_audio_path):
     audio_index = row['index_audio']
     audio_path = row['directory_audio']
     audio_file_name = row['filename_audio']
-    pair_id = get_match_ids(midi_index, audio_index)
+    pair_id = get_audio_midi_match_ids(midi_index, audio_index)
 
     new_midi_name = get_new_file_name(midi_file_name, pair_id)
     complete_source_file_path = midi_path + '/' + midi_file_name
@@ -180,3 +201,35 @@ def collect_matched_files(row, new_midi_path, new_audio_path):
 def get_new_file_name(old_file_name, pair_id):
     new_name = str(pair_id) + '_' + str(old_file_name)
     return new_name
+
+
+def check_if_all_files_in_temp_dir(original_file_dir, temp_file_dir):
+    old_files = os.listdir(original_file_dir)
+    temp_files = os.listdir(temp_file_dir)
+    return set(old_files) == set(temp_files)
+
+
+def get_temp_directory(data_type):
+    """
+    retrieve the collection directory for the specific data type
+    :param data_type: either one of audio, video or midi
+    :return: the directory
+    """
+    if data_type in ['audio', 'midi', 'video']:
+        dir = local_temp_dir + str(data_type) + '/'
+        return dir
+    else:
+        raise ValueError('not acceptable data type')
+
+
+def setup_batch_temp_folders(batch_size, input_folder, temp_dir):
+    total_files = len(os.listdir(input_folder))
+    folders_needed = ceil(total_files/batch_size)
+    folder_names = []
+    for i in range(0, folders_needed):
+        new_temp_dir_name = temp_dir+"audio_{}/".format(i)
+        oldmask = os.umask(000)
+        os.makedirs(new_temp_dir_name, exist_ok=True, mode=0o755)
+        os.umask(oldmask)
+        folder_names.append(new_temp_dir_name)
+    return folder_names
