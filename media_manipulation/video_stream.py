@@ -1,10 +1,8 @@
-from config.settings import CHUNK_SIZE_SECONDS, CHUNK_SIZE_MS, SAMPLE_RATE, CHANNELS, AUDIO_FILE_TYPE
-from pydub.utils import make_chunks
+from config.settings import CHUNK_SIZE_MS, SAMPLE_RATE, CHANNELS, AUDIO_FILE_TYPE
 from media_manipulation import audio_conversions
-from media_manipulation import video_manipulation
-from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from fingerprinting.djv import ask_dejavu
-from cataloger.catalog_utils import get_temp_directory
+from media_manipulation.video_manipulation import crop_video_to_matches
+from utils.catalog_utils import get_temp_directory
 import pandas as pd
 import re
 import os
@@ -198,23 +196,6 @@ def get_crop_timestamps(df):
                                                        "invalid_mode": "max"})
     tims.reset_index(inplace=True)
     return tims
-
-
-def crop_video_to_matches(trim_df, video_path, target_folder):
-    start_time = trim_df['start']
-    end_time = trim_df['end']
-    target_id = trim_df['video_audio_match_id']
-    file_type = trim_df['video_type']
-    target_name = target_folder + target_id + '_' + str(start_time) + '.' + file_type
-    video_manipulation.extract_subclip(video_path, int(start_time) / 1000, int(end_time) / 1000,
-                                       targetname=target_name)
-
-
-def purge_temp_folder(temp_folder):
-    for filename in os.listdir(temp_folder):
-        file_path = os.path.join(temp_folder, filename)
-        if os.path.isfile(file_path) or os.path.islink(file_path):
-            os.unlink(file_path)
 
 
 if __name__ == '__main__':

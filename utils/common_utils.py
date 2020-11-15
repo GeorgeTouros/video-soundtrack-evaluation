@@ -27,13 +27,6 @@ def script_run_time():
     print('Script ended at:' + str(end_time))
 
 
-def qbit_instance():
-    qb = Client(webui['IP'])
-
-    qb.login(webui['username'], webui['pass'])
-    return qb
-
-
 def append_to_csv(csv_file, data, create=False):
     if create:
         with open(csv_file, 'w', newline='') as csvfile:

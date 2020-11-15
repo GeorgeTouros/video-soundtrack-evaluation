@@ -1,10 +1,11 @@
 import re
 import os
 import pandas as pd
-from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_temp_directory, setup_collection_directory
-from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
+from utils.catalog_utils import create_catalog, cleanup_file_titles, get_temp_directory, setup_collection_directory, \
+    purge_temp_folder
+from utils.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
 from mysql.connector.errors import ProgrammingError
-from common import script_start_time, script_run_time
+from utils.common_utils import script_start_time, script_run_time
 from config.paths import audio_path, video_path, midi_path, collected_data_path
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
@@ -17,9 +18,8 @@ except ProgrammingError:
     from fingerprinting import djv
 from media_manipulation.video_stream import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
     get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
-from media_manipulation.video_stream import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps, \
-    crop_video_to_matches, purge_temp_folder
-from media_manipulation.video_manipulation import blend_audio_with_video
+from media_manipulation.video_stream import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps
+from media_manipulation.video_manipulation import blend_audio_with_video, crop_video_to_matches
 
 # set pandas print_options for debugging purposes
 pd.options.display.width = 0

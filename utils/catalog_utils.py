@@ -6,6 +6,7 @@ from config.paths import collected_data_path, local_temp_dir
 from spotify_wrapper.spotify import Spotify
 from math import ceil
 
+
 def create_catalog(directory, except_dir=[], except_file=''):
     """
     Takes a directory as an input, and outputs a pandas DF with a full catalog of files and locations
@@ -101,7 +102,8 @@ FILENAME_STOPWORDS = ['bdrip', 'brrip', '1080p', '720p', 'aac',
                       'www', 'yifi', 'yts', 'anoxmous', 'bluray', 'hdtv', 'org', 'rcg', 'jh', 'rg2',
                       'webrip', 'criterion', 'dvdrip', 'x264', 'xvid', 'gaz', 'bz2', 'da', 'dc', 'dwb', 'jc2',
                       'dm', 'kar', 'karaoke', 'version', 'jpp', 'jk', 'mc', 'rt', 'gw', 'gc9', 'bb', 'gp', 'gl',
-                      'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm', 'v1', 'mw', 'rw', 'bz3', 'v2', 'fs'
+                      'mix', 'remix', 'dj', 'nr', 'song', 'k', 'gr', 'cm', 'v1', 'mw', 'rw', 'bz3', 'v2', 'fs',
+                      'yify', 'ehhhh', 'blu', 'ray', 'vppv', 'rip', 'enc', 'amzn'
                       ]
 
 
@@ -174,6 +176,15 @@ def get_collection_directory(data_type):
         raise ValueError('not acceptable data type')
 
 
+def setup_curated_video_dir():
+    vid_dir = get_collection_directory('video')
+    new_video_dir = vid_dir + '/curated/'
+    oldmask = os.umask(000)
+    os.makedirs(new_video_dir, exist_ok=True, mode=0o755)
+    os.umask(oldmask)
+    return new_video_dir
+
+
 def collect_matched_files(row, new_midi_path, new_audio_path):
     midi_path = row['directory_midi']
     midi_file_name = row['filename_midi']
@@ -233,3 +244,10 @@ def setup_batch_temp_folders(batch_size, input_folder, temp_dir):
         os.umask(oldmask)
         folder_names.append(new_temp_dir_name)
     return folder_names
+
+
+def purge_temp_folder(temp_folder):
+    for filename in os.listdir(temp_folder):
+        file_path = os.path.join(temp_folder, filename)
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)

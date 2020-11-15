@@ -1,5 +1,5 @@
 import pandas as pd
-from common import script_start_time, script_run_time
+from utils.common_utils import script_start_time, script_run_time
 from imdb_wrapper.imdb import IMDB
 from spotify_wrapper.spotify import Spotify
 

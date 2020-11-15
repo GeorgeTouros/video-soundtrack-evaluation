@@ -2,14 +2,14 @@
 import argparse
 from db_handler.db_handler import DatabaseHandler
 from mysql.connector.errors import ProgrammingError
-from cataloger.catalog_utils import get_collection_directory
+from utils.catalog_utils import get_collection_directory, purge_temp_folder
+
 try:
     from fingerprinting import djv
 except ProgrammingError:
     db = DatabaseHandler()
     db.create_db('dejavu')
     from fingerprinting import djv
-from media_manipulation.video_stream import purge_temp_folder
 import gc
 
 # Initiate the parser
