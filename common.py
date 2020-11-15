@@ -1,4 +1,4 @@
-from credentials import webui
+from config.credentials import webui
 from datetime import datetime
 from qbittorrent import Client
 import os.path
@@ -66,10 +66,3 @@ def stopword_finder(string_list, n):
     return stopwords
 
 
-CHUNK_SIZE_SECONDS = 5
-CHUNK_SIZE_MS = CHUNK_SIZE_SECONDS * 1000  # ms
-
-SAMPLE_RATE = 16000
-CHANNELS = 1
-BATCH_SIZE = 200
-AUDIO_FILE_TYPE = 'wav'

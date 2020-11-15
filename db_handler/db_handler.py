@@ -1,5 +1,5 @@
 import sqlalchemy
-from credentials import MySQL
+from config.credentials import MySQL
 
 
 class DatabaseHandler(object):

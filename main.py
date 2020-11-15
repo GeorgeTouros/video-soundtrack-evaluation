@@ -3,13 +3,11 @@ import os
 import pandas as pd
 from cataloger.catalog_utils import create_catalog, cleanup_file_titles, get_temp_directory, setup_collection_directory
 from cataloger.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
-from cataloger.catalog_utils import get_collection_directory, check_if_all_files_in_temp_dir, setup_batch_temp_folders
 from mysql.connector.errors import ProgrammingError
 from common import script_start_time, script_run_time
-from paths import audio_path, video_path, midi_path, collected_data_path, temp_dir, local_temp_dir
+from config.paths import audio_path, video_path, midi_path, collected_data_path
 from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
-from media_manipulation.audio_conversions import copy_and_convert_dir, copy_and_convert_files_list
 
 try:
     from fingerprinting import djv
@@ -21,7 +19,6 @@ from media_manipulation.video_stream import extract_audio_chunks_from_video, fin
     get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
 from media_manipulation.video_stream import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps, \
     crop_video_to_matches, purge_temp_folder
-from common import SAMPLE_RATE, CHANNELS, BATCH_SIZE
 from media_manipulation.video_manipulation import blend_audio_with_video
 
 # set pandas print_options for debugging purposes
@@ -91,6 +88,8 @@ if __name__ == '__main__':
 
     if mode in ['video', 'all']:
         # continue with the video files
+        if not db.check_for_existing_tables('audio_video_matches'):
+            db.execute_from_file('./sql/create_audio_video_matches_table.sql')
         print('start video catalog')
         video_catalog = create_catalog(video_path, except_file=irrelevant_files)
         video_catalog = cleanup_file_titles(video_catalog, "video", allow_numbers=True)
@@ -100,9 +99,9 @@ if __name__ == '__main__':
         try:
             already_there = pd.read_sql_table('video_catalog', con=db_connection)
             video_catalog = video_catalog.loc[~video_catalog['filename'].isin(already_there['filename'])]
-            video_catalog.to_sql('video_catalog', con=db_connection, if_exists='append', index=True, index_label='id')
+            video_catalog.to_sql('video_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
         except ValueError:
-            video_catalog.to_sql('video_catalog', con=db_connection, if_exists='append', index=True, index_label='id')
+            video_catalog.to_sql('video_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
 
         print('finish video catalog')
 
@@ -127,24 +126,6 @@ if __name__ == '__main__':
                                                                 index=False,
                                                                 if_exists='replace')
         merged.to_csv('var/midi_audio_matches.csv', index=False)
-
-
-
-
-    if mode in ['fingerprint', 'all']:
-        try:
-            db = DatabaseHandler('dejavu')
-        except exc.ProgrammingError:
-            db = DatabaseHandler()
-            db.create_db('dejavu')
-            db = DatabaseHandler('dejavu')
-
-        # db_connection = db.connection
-
-        local_audio_temp_dir = './temp/audio_{}}'
-        print("start making fingerprints")
-        djv.get_fingerprints_from_directory(local_audio_temp_dir, ['mp3', 'MP3'], 4)
-        purge_temp_folder(local_audio_temp_dir)
 
     if mode in ['clip_finder', 'all']:
         video_paths = pd.read_sql_table('video_catalog', con=db_connection)

@@ -1,8 +1,8 @@
 import os
 from cataloger.catalog_utils import get_temp_directory, setup_collection_directory
 from cataloger.catalog_utils import get_collection_directory, setup_batch_temp_folders
-from common import SAMPLE_RATE, CHANNELS, BATCH_SIZE, AUDIO_FILE_TYPE
-from paths import local_temp_dir
+from config.settings import SAMPLE_RATE, CHANNELS, BATCH_SIZE, AUDIO_FILE_TYPE
+from config.paths import local_temp_dir
 from media_manipulation.audio_conversions import copy_and_convert_files_list
 
 collected_audio_dir = get_collection_directory('audio')

@@ -1,8 +1,7 @@
 import pandas as pd
-from cataloger.catalog_utils import get_temp_directory
 from cataloger.catalog_utils import get_video_audio_match_ids
 from db_handler.db_handler import DatabaseHandler
-from paths import collected_data_path
+from config.paths import collected_data_path
 from sqlalchemy import exc
 from media_manipulation.video_stream import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
     get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff

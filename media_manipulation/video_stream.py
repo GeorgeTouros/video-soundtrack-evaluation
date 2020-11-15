@@ -1,4 +1,4 @@
-from common import CHUNK_SIZE_MS, SAMPLE_RATE, CHANNELS, AUDIO_FILE_TYPE, CHUNK_SIZE_SECONDS
+from config.settings import CHUNK_SIZE_SECONDS, CHUNK_SIZE_MS, SAMPLE_RATE, CHANNELS, AUDIO_FILE_TYPE
 from pydub.utils import make_chunks
 from media_manipulation import audio_conversions
 from media_manipulation import video_manipulation

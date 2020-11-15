@@ -1,7 +1,6 @@
 from dejavu import Dejavu
-from credentials import MySQL
+from config.credentials import MySQL
 from dejavu.logic.recognizer.file_recognizer import FileRecognizer
-from db_handler.db_handler import DatabaseHandler
 
 config = {
      "database": {

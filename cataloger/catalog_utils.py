@@ -2,7 +2,7 @@ import os
 import re
 from shutil import copyfile
 import pandas as pd
-from paths import collected_data_path, local_temp_dir
+from config.paths import collected_data_path, local_temp_dir
 from spotify_wrapper.spotify import Spotify
 from math import ceil
 
