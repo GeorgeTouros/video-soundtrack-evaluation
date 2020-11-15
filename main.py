@@ -88,8 +88,8 @@ if __name__ == '__main__':
 
     if mode in ['video', 'all']:
         # continue with the video files
-        if not db.check_for_existing_tables('audio_video_matches'):
-            db.execute_from_file('./sql/create_audio_video_matches_table.sql')
+        if not db.check_for_existing_tables('video_catalog'):
+            db.execute_from_file('./sql/create_video_catalog.sql')
         print('start video catalog')
         video_catalog = create_catalog(video_path, except_file=irrelevant_files)
         video_catalog = cleanup_file_titles(video_catalog, "video", allow_numbers=True)
