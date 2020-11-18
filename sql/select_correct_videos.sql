@@ -1,5 +1,5 @@
 SELECT
-    vm.id, vm.video_audio_match_id, vm.start, vm.end,vm.video_type, s.song_name, vc.title
+    vm.id, vm.video_audio_match_id, vm.start, vm.end,vm.video_type, s.song_name, vc.title, vc.directory, vc.filename
 FROM
     file_system_catalogs.audio_video_matches vm
        LEFT JOIN
