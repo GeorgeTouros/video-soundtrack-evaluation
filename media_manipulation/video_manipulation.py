@@ -19,9 +19,9 @@ def extract_subclip(input_video, start_timestamp, end_timestamp, targetname):
     in_v = " -i {} ".format(quote(input_video))
     search_start = " -ss {}".format(start_timestamp)
     search_length = " -t {}".format(end_timestamp - start_timestamp)
-    codecs = " -map 0 -vcodec copy -acodec copy "
-
-    cmd = "ffmpeg -y" + in_v + " -sn" + search_start + search_length + codecs + targetname
+    # codecs = " -map 0 -codec copy -sn "
+    codecs = " -map 0 -c:v libx264 -preset superfast -crf 17 -acodec copy -sn "
+    cmd = "ffmpeg -y" + search_start + in_v + search_length + codecs + targetname
     subprocess.call(cmd, shell=True)
 
 
@@ -41,13 +41,14 @@ def get_cropped_target_name(input_file, target_directory, index, file_type='.mp4
     return target_name
 
 
-def video_chunker(input_file, target_directory, file_type, file_length, chunk_size=15):
+def video_chunker(input_file, target_directory, target_name, file_type, file_length, chunk_size=15, start=0):
     chunk_index = 0
     while chunk_index <= file_length:
-        if file_length-chunk_index>=15:
-            file_name = get_cropped_target_name(input_file, target_directory, chunk_index, file_type)
+        starting_point = start/1000 + chunk_index
+        if file_length-chunk_index >= 15:
+            file_name = get_cropped_target_name(target_name, target_directory, chunk_index, file_type)
             print('exporting chunk ' + file_name)
-            extract_subclip(input_file, chunk_index, chunk_index+chunk_size, file_name)
+            extract_subclip(input_file, starting_point, starting_point+chunk_size, file_name)
             chunk_index += chunk_size
         else:
             chunk_index += chunk_size
