@@ -4,7 +4,7 @@ from pyAudioAnalysis import audioBasicIO
 import numpy as np
 
 
-class AudioFeatureExtractor:
+class AudioFeatureExtractor():
     def __init__(self):
         pass
 

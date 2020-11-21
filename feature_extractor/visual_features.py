@@ -6,9 +6,9 @@ The script extracts visual-based features from videos.
 Flags:
 
     - f: extract features from specific file
-        E.g. python3 analyze_visual.py -f <filename>
+        E.g. python3 visual_features.py -f <filename>
     - d: extract features from all files of a directory
-        E.g. python3 analyze_visual.py -d <directory_name>
+        E.g. python3 visual_features.py -d <directory_name>
 
 Basic functions:
 
@@ -19,18 +19,14 @@ Basic functions:
 Please read the docstrings for further information.
 """
 
-import cv2
-import time
-import sys
+import collections
 import glob
 import os
-import numpy as np
-import collections
+import sys
 
-from analyze_visual.object_detection import detection_utils as dutils
-from analyze_visual.object_detection import generic_model as gmodel
-from analyze_visual.utils import *
-
+from feature_extractor.analyze_visual.object_detection import detection_utils as dutils
+from feature_extractor.analyze_visual.object_detection import generic_model as gmodel
+from feature_extractor.analyze_visual.utils import *
 
 generic_model = gmodel.SsdNvidia()
 
