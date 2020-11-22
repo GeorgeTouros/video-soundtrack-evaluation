@@ -1,8 +1,8 @@
 import copy
 import numpy as np
 import pandas as pd
-from feature_extractor.analyze_visual.utils import rect_area
-from feature_extractor.analyze_visual.utils import intersect_rectangles
+from utils.analyze_visual.utils import rect_area
+from utils.analyze_visual.utils import intersect_rectangles
 
 super_categories = {1: 'person',
                     2: 'vehicle',
@@ -398,7 +398,7 @@ def save_object_features(object_features, super_object_features,
                     2: returns features for both 80 and 12 categories
 
     """
-    with open("category_names.txt", encoding="utf-8") as file:
+    with open("./var/visual_feat_statics/category_names.txt", encoding="utf-8") as file:
         category_names = [l.rstrip("\n") for l in file]
 
     super_category_names = ['person', 'vehicle', 'outdoor', 'animal',

@@ -23,12 +23,14 @@ import collections
 import glob
 import os
 import sys
+from urllib.error import HTTPError
+from utils.analyze_visual.object_detection import detection_utils as dutils, generic_model as gmodel
+from utils.analyze_visual.utils import *
 
-from feature_extractor.analyze_visual.object_detection import detection_utils as dutils
-from feature_extractor.analyze_visual.object_detection import generic_model as gmodel
-from feature_extractor.analyze_visual.utils import *
-
-generic_model = gmodel.SsdNvidia()
+try:
+    generic_model = gmodel.SsdNvidia()
+except HTTPError:
+    print("Couldn't download model from NVIDIA. Forget the deep features")
 
 
 def process_video(video_path, process_mode, print_flag=True,
@@ -43,7 +45,8 @@ def process_video(video_path, process_mode, print_flag=True,
         process_mode (int) : Processing modes:
             - 0 : No processing
             - 1 : Color analysis
-            - 2 : Flow analysis and object detection
+            - 2 : Flow analysis and face detection
+            - 3 : other object detection
         print_flag (bool) : Flag to allow the display of terminal messages.
         online_display (bool): Flag to allow the display of online video features
         save_results (bool) : Boolean variable to allow save results files.
@@ -88,6 +91,16 @@ def process_video(video_path, process_mode, print_flag=True,
     t_process = np.array([])
 
     if process_mode > 1:
+        overlap_threshold = 0.8
+        mean_confidence_threshold = 0.5
+        max_frames = 3
+        tilt_pan_confidences = collections.deque(maxlen=200)
+        cascade_frontal, cascade_profile = initialize_face(
+            HAAR_CASCADE_PATH_FRONTAL, HAAR_CASCADE_PATH_PROFILE)
+        frontal_faces_num = collections.deque(maxlen=200)
+        frontal_faces_ratio = collections.deque(maxlen=200)
+
+    if process_mode == 3:
         # --------------------------------------------------------------------
         which_object_categories = 2  # which object categories to store as features
         """
@@ -98,18 +111,10 @@ def process_video(video_path, process_mode, print_flag=True,
 
         """
         # --------------------------------------------------------------------
-        overlap_threshold = 0.8
-        mean_confidence_threshold = 0.5
-        max_frames = 3
         objects_boxes_all = []
         objects_labels_all = []
         objects_confidences_all = []
-        frontal_faces_num = collections.deque(maxlen=200)
-        frontal_faces_ratio = collections.deque(maxlen=200)
-        tilt_pan_confidences = collections.deque(maxlen=200)
 
-        cascade_frontal, cascade_profile = initialize_face(
-            HAAR_CASCADE_PATH_FRONTAL, HAAR_CASCADE_PATH_PROFILE)
     count = 0
     count_process = 0
 
@@ -283,24 +288,24 @@ def process_video(video_path, process_mode, print_flag=True,
                                     hist_rgb_ratio, hist_v, hist_s,
                                     frontal_faces_num, frontal_faces_ratio,
                                     tilt_pan_confidences)
+                    if process_mode == 3:
+                        window_name = 'Object Detection'
+                        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                        cv2.resizeWindow(window_name, (width, height))
 
-                    window_name = 'Object Detection'
-                    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-                    cv2.resizeWindow(window_name, (width, height))
+                        objects = generic_model.detect(frame, 0.4)
 
-                    objects = generic_model.detect(frame, 0.4)
-
-                    generic_model.display_cv2(frame, objects, window_name)
-                    cv2.moveWindow(window_name, width, 0)
+                        generic_model.display_cv2(frame, objects, window_name)
+                        cv2.moveWindow(window_name, width, 0)
                     if cv2.waitKey(25) & 0xFF == ord('q'):
                         break
                     t_0 = t_2
+                if process_mode == 3:
+                    objects = generic_model.detect(frame, 0.1)
 
-                objects = generic_model.detect(frame, 0.1)
-
-                objects_boxes_all.append(objects[0])
-                objects_labels_all.append(objects[1])
-                objects_confidences_all.append(objects[2])
+                    objects_boxes_all.append(objects[0])
+                    objects_labels_all.append(objects[1])
+                    objects_confidences_all.append(objects[2])
 
                 process_now = False
                 img_gray_prev = img_gray
@@ -340,7 +345,7 @@ def process_video(video_path, process_mode, print_flag=True,
         print('Shape of features\' stats found: {}'.format(
             features_stats.shape))
         print('Number of shot changes: {}'.format(len(shot_change_times)))
-    if process_mode > 1:
+    if process_mode == 3:
         objects = dutils.smooth_object_confidence(
                     objects_labels_all, objects_confidences_all,
                     objects_boxes_all, overlap_threshold,
@@ -395,12 +400,12 @@ def process_video(video_path, process_mode, print_flag=True,
         if save_results:
             np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
             np.savetxt("features_stats.csv", features_stats, delimiter=",")
+    if process_mode > 2:
+        f_names, f_names_stats = get_features_names(process_mode, which_object_categories)
+    else:
+        f_names, f_names_stats = get_features_names(process_mode)
 
-    f_names, f_names_stats = get_features_names(process_mode,
-                                                which_object_categories)
-
-    return features_stats,  f_names_stats,  feature_matrix, f_names, \
-           shot_change_times
+    return features_stats,  f_names_stats,  feature_matrix, f_names, shot_change_times
 
 
 def dir_process_video(dir_name, process_mode, print_flag,

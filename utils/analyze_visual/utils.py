@@ -1,4 +1,4 @@
-
+import os
 import cv2
 import time
 import numpy as np
@@ -9,8 +9,8 @@ process_step = 0.2
 plot_step = 2
 
 # face detection-related paths:
-HAAR_CASCADE_PATH_FRONTAL = "haarcascade_frontalface_default.xml"
-HAAR_CASCADE_PATH_PROFILE = "haarcascade_frontalface_default.xml"
+HAAR_CASCADE_PATH_FRONTAL = "./var/visual_feat_statics/haarcascade_frontalface_default.xml"
+HAAR_CASCADE_PATH_PROFILE = "./var/visual_feat_statics/haarcascade_frontalface_default.xml"
 
 # flow-related parameters:
 lk_params = dict(winSize=(15, 15),
@@ -588,7 +588,7 @@ def display_time(dur_secs, fps_process, t_process, t_0,
     return t_2
 
 
-def get_features_names(process_mode, which_object_categories):
+def get_features_names(process_mode, which_object_categories=0):
     feature_names = []
     hist_r = 'hist_r'
     hist_g = 'hist_g'
@@ -611,7 +611,6 @@ def get_features_names(process_mode, which_object_categories):
     frame_value_diff = 'frame_value_diff'
     feature_names.append(frame_value_diff)
 
-
     if process_mode > 1:
         frontal_faces_num = 'frontal_faces_num'
         feature_names.append(frontal_faces_num)
@@ -630,28 +629,28 @@ def get_features_names(process_mode, which_object_categories):
         feature_stats_names += ['std_' + name for name in feature_names]
         feature_stats_names += ['stdmean_' + name for name in feature_names]
         feature_stats_names += ['mean10top_' + name for name in feature_names]
+        if process_mode == 3:
+            if which_object_categories > 0:
+                category_names = ['person', 'vehicle', 'outdoor', 'animal',
+                                        'accessory', 'sports', 'kitchen', 'food',
+                                        'furniture', 'electronic', 'appliance',
+                                        'indoor']
 
-        if which_object_categories > 0:
-            category_names = ['person', 'vehicle', 'outdoor', 'animal',
-                                    'accessory', 'sports', 'kitchen', 'food',
-                                    'furniture', 'electronic', 'appliance',
-                                    'indoor']
+            else:
+                with open("./var/visual_feat_statics/category_names.txt", encoding="utf-8") as file:
+                    category_names = [l.rstrip("\n") for l in file]
 
-        else:
-            with open("category_names.txt", encoding="utf-8") as file:
-                category_names = [l.rstrip("\n") for l in file]
+            for category in category_names:
+                feature_names.append(category + '_num')
+                feature_stats_names.append(category + '_freq')
 
-        for category in category_names:
-            feature_names.append(category + '_num')
-            feature_stats_names.append(category + '_freq')
+            for category in category_names:
+                feature_names.append(category + '_confidence')
+                feature_stats_names.append(category + '_mean_confidence')
 
-        for category in category_names:
-            feature_names.append(category + '_confidence')
-            feature_stats_names.append(category + '_mean_confidence')
-
-        for category in category_names:
-            feature_names.append(category + '_area_ratio')
-            feature_stats_names.append(category + '_mean_area_ratio')
+            for category in category_names:
+                feature_names.append(category + '_area_ratio')
+                feature_stats_names.append(category + '_mean_area_ratio')
 
     else:
         feature_stats_names = ['mean_' + name for name in feature_names]
