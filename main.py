@@ -1,9 +1,7 @@
 import re
 import os
 import pandas as pd
-from utils.catalog_utils import create_catalog, cleanup_file_titles, get_temp_directory, setup_collection_directory, \
-    purge_temp_folder
-from utils.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
+from utils.catalog_utils import *
 from mysql.connector.errors import ProgrammingError
 from utils.common_utils import script_start_time, script_run_time
 from config.paths import audio_path, video_path, midi_path, collected_data_path
@@ -51,6 +49,31 @@ if __name__ == '__main__':
             db = DatabaseHandler('file_system_catalogs')
 
         db_connection = db.connection
+
+    if mode in ["lmd", "all"]:
+        lmd = get_lmd_match_names()
+        dirs = []
+        names = []
+        for dirname, dirnames, filenames in os.walk('/media/zappatistas20/Elements/Thesis/Data/midis/lmd_matched'):
+            for filename in filenames:
+                dirs.append(dirname)
+                names.append(filename)
+        d = {'directory': dirs, 'filename': names}
+        available = pd.DataFrame.from_dict(d)
+        matched_keys = []
+        matched_values = []
+        for key in lmd.keys():
+            match_key = key + '.mid'
+            if match_key in available['filename'].values:
+                matched_keys.append(match_key)
+                name = lmd[key][0][lmd[key][0].find('/')+1:]
+                matched_values.append(name)
+        lmdict = {'file_lmd':matched_keys, 'match_name':matched_values}
+        lookup = pd.DataFrame.from_dict(lmdict)
+        joined = pd.merge(left=available, right=lookup, how='inner', left_on='filename', right_on='file_lmd')
+        print(joined.head())
+
+
 
     if mode in ["midi", "all"]:
         # start with the midi files

@@ -5,6 +5,7 @@ import pandas as pd
 from config.paths import collected_data_path, local_temp_dir
 from spotify_wrapper.spotify import Spotify
 from math import ceil
+import json
 
 
 def create_catalog(directory, except_dir=[], except_file=''):
@@ -33,6 +34,11 @@ def create_catalog(directory, except_dir=[], except_file=''):
     output = pd.DataFrame.from_dict(d)
     return output
 
+
+def get_lmd_match_names():
+    with open('./utils/md5_to_paths.json') as f:
+        data = json.load(f)
+    return data
 
 def cleanup_file_titles(df, file_type, allow_numbers=False):
     """
