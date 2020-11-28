@@ -29,10 +29,12 @@ psycopg2-binary
 
 # pip install https://github.com/worldveil/dejavu/zipball/master --no-deps
 
-torch==1.7.0+cu110
-torchvision==0.8.1+cu110
-torchaudio===0.7.0
+torch==1.7.0+cpu
+torchvision==0.8.1+cpu
+torchaudio==0.7.0
 
 moviepy~=1.0.3
 
-eyeD3
+eyeD3~=0.9.5
+
+music21~=6.3.0
