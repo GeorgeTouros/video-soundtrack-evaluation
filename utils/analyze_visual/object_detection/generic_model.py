@@ -106,8 +106,10 @@ class SsdNvidia:
 
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
                                     'nvidia_ssd_processing_utils')
-
-        self.classes_to_labels = self.utils.get_coco_object_dictionary()
+        def get_coco_object_dictionary():
+            with open("./var/visual_feat_statics/category_names.txt", encoding="utf-8") as file:
+                category_names = [l.rstrip("\n") for l in file]
+        self.classes_to_labels = get_coco_object_dictionary()
         self.model.to(self.device)
         self.model.eval()
 
