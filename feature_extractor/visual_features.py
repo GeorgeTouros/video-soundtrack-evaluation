@@ -6,15 +6,42 @@ from utils.analyze_visual.utils import *
 try:
     generic_model = gmodel.SsdNvidia()
 except HTTPError:
+    no_ssd = True
     print("Couldn't download model from NVIDIA. Forget the deep features")
 
 
-class VisualFeatureExtractor():
-    def __init__(self):
-        pass
-    t_start = time.time()
+class VisualFeatureExtractor(object):
+    def __init__(self, process_mode):
+        """
+        :param process_mode: Processing modes:
+            - 0 : No processing
+            - 1 : Color analysis
+            - 2 : Flow analysis and face detection
+            - 3 : other object detection
+        """
+        self.process_mode = process_mode
 
-    def extract_visual_features(self, video_path, process_mode, print_flag=True,
+        if no_ssd and self.process_mode == 3:
+            self.process_mode = 2
+
+        if self.process_mode > 1:
+            self.overlap_threshold = 0.8
+            self.mean_confidence_threshold = 0.5
+            self.max_frames = 3
+
+        if self.process_mode == 3:
+            # --------------------------------------------------------------------
+            self.which_object_categories = 2  # which object categories to store as features
+            """
+            Takes values:
+                0: returns features for all 80 categories
+                1: returns features for 12 super categories
+                2: returns features for both 80 and 12 categories
+
+            """
+            # --------------------------------------------------------------------
+
+    def extract_visual_features(self, video_path, print_flag=True,
                                 online_display=False, save_results=True):
         """
         Extracts and displays features representing color, flow, objects detected
@@ -23,15 +50,9 @@ class VisualFeatureExtractor():
         Args:
 
             video_path (str) : Path to video file
-            process_mode (int) : Processing modes:
-                - 0 : No processing
-                - 1 : Color analysis
-                - 2 : Flow analysis and face detection
-                - 3 : other object detection
             print_flag (bool) : Flag to allow the display of terminal messages.
             online_display (bool): Flag to allow the display of online video features
             save_results (bool) : Boolean variable to allow save results files.
-
         Returns:
 
             features_stats (array_like) : Feature vector with stats on features
@@ -50,7 +71,8 @@ class VisualFeatureExtractor():
                 - feature_names[1] (list) : names of the feature_stats features
         """
         # ---Initializations-------------------------------------------------------
-        t_0 = self.t_start
+        t_start = time.time()
+        t_0 = t_start
         capture = cv2.VideoCapture(video_path)
         frames_number = capture.get(cv2.CAP_PROP_FRAME_COUNT)
         fps = capture.get(cv2.CAP_PROP_FPS)
@@ -69,27 +91,14 @@ class VisualFeatureExtractor():
         fps_process = np.array([])
         t_process = np.array([])
 
-        if process_mode > 1:
-            overlap_threshold = 0.8
-            mean_confidence_threshold = 0.5
-            max_frames = 3
+        if self.process_mode > 1:
             tilt_pan_confidences = collections.deque(maxlen=200)
             cascade_frontal, cascade_profile = initialize_face(
                 HAAR_CASCADE_PATH_FRONTAL, HAAR_CASCADE_PATH_PROFILE)
             frontal_faces_num = collections.deque(maxlen=200)
             frontal_faces_ratio = collections.deque(maxlen=200)
 
-        if process_mode == 3:
-            # --------------------------------------------------------------------
-            which_object_categories = 2  # which object categories to store as features
-            """
-            Takes values:
-                0: returns features for all 80 categories
-                1: returns features for 12 super categories
-                2: returns features for both 80 and 12 categories
-    
-            """
-            # --------------------------------------------------------------------
+        if self.process_mode == 3:
             objects_boxes_all = []
             objects_labels_all = []
             objects_confidences_all = []
@@ -124,7 +133,7 @@ class VisualFeatureExtractor():
                 img_gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
                 (width, height) = img_gray.shape[1], img_gray.shape[0]
 
-                if process_mode > 1:
+                if self.process_mode > 1:
                     if (count % 25) == 1:
                         # Determines strong corners on an image.
                         p0 = cv2.goodFeaturesToTrack(img_gray, mask=None,
@@ -140,7 +149,7 @@ class VisualFeatureExtractor():
                     feature_vector_current = np.array([])
 
                     # ---Get features from color analysis-------------------------
-                    if process_mode > 0:
+                    if self.process_mode > 0:
                         # PROCESS LEVEL 1:
                         feature_vector_current, \
                         hist_rgb_ratio, hist_s, hist_v, \
@@ -162,7 +171,7 @@ class VisualFeatureExtractor():
                         hist_v_prev = hist_v
 
                     # ---Get flow and object related features---------------------
-                    if process_mode > 1:
+                    if self.process_mode > 1:
                         # face detection
                         frontal_faces = detect_faces(rgb, cascade_frontal,
                                                      cascade_profile)
@@ -210,7 +219,7 @@ class VisualFeatureExtractor():
                             0)
 
                     # ---Append current feature vector to feature matrix----------
-                    if process_mode > 0:
+                    if self.process_mode > 0:
                         if count_process == 1:
                             feature_matrix = np.reshape(
                                 feature_vector_current,
@@ -231,7 +240,7 @@ class VisualFeatureExtractor():
                         # draw RGB image and visualizations
                         vis = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
 
-                        if process_mode > 1 and len(p0) > 0:
+                        if self.process_mode > 1 and len(p0) > 0:
                             # faces bounding boxes:
                             for f in frontal_faces:  # draw face rectangles
                                 cv2.rectangle(vis, (f[0], f[1]),
@@ -263,11 +272,11 @@ class VisualFeatureExtractor():
                                            width, vis)
 
                         # Display features on windows
-                        windows_display(vis, height, process_mode, v_norm,
+                        windows_display(vis, height, self.process_mode, v_norm,
                                         hist_rgb_ratio, hist_v, hist_s,
                                         frontal_faces_num, frontal_faces_ratio,
                                         tilt_pan_confidences)
-                        if process_mode == 3:
+                        if self.process_mode == 3:
                             window_name = 'Object Detection'
                             cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
                             cv2.resizeWindow(window_name, (width, height))
@@ -279,7 +288,7 @@ class VisualFeatureExtractor():
                         if cv2.waitKey(25) & 0xFF == ord('q'):
                             break
                         t_0 = t_2
-                    if process_mode == 3:
+                    if self.process_mode == 3:
                         objects = generic_model.detect(frame, 0.1)
 
                         objects_boxes_all.append(objects[0])
@@ -293,7 +302,7 @@ class VisualFeatureExtractor():
                 capture.release()
                 cv2.destroyAllWindows()
 
-        processing_time = time.time() - self.t_start
+        processing_time = time.time() - t_0
 
         # ---Append shot durations in feature matrix------------------------------
         for ccc in range(count_process - shot_change_process_indices[-1]):
@@ -324,17 +333,17 @@ class VisualFeatureExtractor():
             print('Shape of features\' stats found: {}'.format(
                 features_stats.shape))
             print('Number of shot changes: {}'.format(len(shot_change_times)))
-        if process_mode == 3:
+        if self.process_mode == 3:
             objects = dutils.smooth_object_confidence(
                 objects_labels_all, objects_confidences_all,
-                objects_boxes_all, overlap_threshold,
-                mean_confidence_threshold, max_frames)
+                objects_boxes_all, self.overlap_threshold,
+                self.mean_confidence_threshold, self.max_frames)
 
             if objects:
                 out_labels, out_boxes, out_confidences = objects
                 (object_features_stats,
                  super_object_features_stats) = dutils.get_object_features(
-                    out_labels, out_confidences, out_boxes, which_object_categories)
+                    out_labels, out_confidences, out_boxes, self.which_object_categories)
 
                 # dutils.save_object_features(object_features_stats, super_object_features_stats,
                 #                     2)
@@ -343,16 +352,16 @@ class VisualFeatureExtractor():
                  labels_avg_confidence_per_frame, labels_area_ratio_per_frame) = \
                     dutils.get_object_features_per_frame(
                         out_labels, out_confidences, out_boxes,
-                        which_object_categories)
+                        self.which_object_categories)
                 feature_matrix = np.concatenate((
-                    feature_matrix[:(-max_frames + 1)][:],
+                    feature_matrix[:(-self.max_frames + 1)][:],
                     labels_freq_per_frame), axis=1)
                 feature_matrix = np.concatenate((
                     feature_matrix, labels_avg_confidence_per_frame), axis=1)
                 feature_matrix = np.concatenate((
                     feature_matrix, labels_area_ratio_per_frame), axis=1)
 
-                if which_object_categories > 0:
+                if self.which_object_categories > 0:
                     overall_labels_freq = np.asarray(super_object_features_stats[0])
                     overall_labels_avg_confidence = np.asarray(super_object_features_stats[1])
                     overall_labels_area_ratio = np.asarray(super_object_features_stats[2])
@@ -379,10 +388,10 @@ class VisualFeatureExtractor():
             if save_results:
                 np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
                 np.savetxt("features_stats.csv", features_stats, delimiter=",")
-        if process_mode > 2:
-            f_names, f_names_stats = get_features_names(process_mode, which_object_categories)
+        if self.process_mode > 2:
+            f_names, f_names_stats = get_features_names(self.process_mode, self.which_object_categories)
         else:
-            f_names, f_names_stats = get_features_names(process_mode)
+            f_names, f_names_stats = get_features_names(self.process_mode)
 
         return features_stats, f_names_stats, feature_matrix, f_names, shot_change_times
 

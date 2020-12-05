@@ -3,10 +3,10 @@ from feature_extractor.visual_features import VisualFeatureExtractor
 
 if __name__ == '__main__':
 
-    v_e = VisualFeatureExtractor()
+    v_e = VisualFeatureExtractor(process_mode=3)
     v_file = './temp/test_dataset/V2A2822_4985000__30.mp4'
     features_stats, f_names_stats, feature_matrix, f_names, shot_change_times = \
-        v_e.extract_visual_features(v_file, process_mode=3, save_results=False)
+        v_e.extract_visual_features(v_file, save_results=False, online_display=True)
 
     for feature in f_names:
         print(feature)
