@@ -1,4 +1,4 @@
-from music21 import converter, corpus, instrument, midi, note, chord, pitch, environment
+from music21 import *
 from music21.midi import translate
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -81,13 +81,99 @@ def print_parts_countour(midi):
     plt.show()
 
 
+def note_count(measure, count_dict):
+    bass_note = None
+    for chord in measure.recurse().getElementsByClass('Chord'):
+        # All notes have the same length of its chord parent.
+        note_length = chord.quarterLength
+        for note in chord.pitches:
+            # If note is "C5", note.name is "C". We use "C5"
+            # style to be able to detect more precise inversions.
+            note_name = str(note)
+            if (bass_note is None or bass_note.ps > note.ps):
+                bass_note = note
+
+            if note_name in count_dict:
+                count_dict[note_name] += note_length
+            else:
+                count_dict[note_name] = note_length
+
+    return bass_note
+
+
+def simplify_roman_name(roman_numeral):
+    # Chords can get nasty names as "bII#86#6#5",
+    # in this method we try to simplify names, even if it ends in
+    # a different chord to reduce the chord vocabulary and display
+    # chord function clearer.
+    ret = roman_numeral.romanNumeral
+    inversion_name = None
+    inversion = roman_numeral.inversion()
+
+    # Checking valid inversions.
+    if ((roman_numeral.isTriad() and inversion < 3) or
+            (inversion < 4 and
+             (roman_numeral.seventh is not None or roman_numeral.isSeventh()))):
+        inversion_name = roman_numeral.inversionName()
+
+    if (inversion_name is not None):
+        ret = ret + str(inversion_name)
+
+    elif (roman_numeral.isDominantSeventh()):
+        ret = ret + "M7"
+    elif (roman_numeral.isDiminishedSeventh()):
+        ret = ret + "o7"
+    return ret
+
+
+def harmonic_reduction(midi_file):
+    ret = []
+    temp_midi = stream.Score()
+    temp_midi_chords = midi_file.chordify()
+    temp_midi.insert(0, temp_midi_chords)
+    music_key = temp_midi.analyze('key')
+    max_notes_per_chord = 4
+    for m in temp_midi_chords.measures(0, None):  # None = get all measures.
+        if (type(m) != stream.Measure):
+            continue
+
+        # Here we count all notes length in each measure,
+        # get the most frequent ones and try to create a chord with them.
+        count_dict = dict()
+        bass_note = note_count(m, count_dict)
+        if (len(count_dict) < 1):
+            ret.append("-")  # Empty measure
+            continue
+
+        sorted_items = sorted(count_dict.items(), key=lambda x: x[1])
+        sorted_notes = [item[0] for item in sorted_items[-max_notes_per_chord:]]
+        measure_chord = chord.Chord(sorted_notes)
+
+        # Convert the chord to the functional roman representation
+        # to make its information independent of the music key.
+        roman_numeral = roman.romanNumeralFromChord(measure_chord, music_key)
+        ret.append(simplify_roman_name(roman_numeral))
+
+    return ret
+
+
 if __name__ == '__main__':
-    base_midi = open_midi('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid', True)
-    base_midi.show()
+    # mf = midi.MidiFile()
+    # mf.open('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid')
+    # mf.read()
+    # print(mf.format)
+    # mf.close()
+    # base_midi = translate.midiStringToStream()
+    base_midi = converter.parse('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid', format='midi',
+                                forceSource=True, quantizePost=True,
+                                quarterLengthDivisors=(16, 12))
+    # base_midi = open_midi('../temp/test_dataset/M19182A50503_JOHN.Madman across the water K.mid', False)
+    # base_midi = base_midi.quantize(processDurations=True)
+    #base_midi.show()
     list_instruments(base_midi)
-    print_parts_countour(base_midi.measures(0, 6))
-    base_midi.plot('histogram', 'pitchClass', 'count')
-    base_midi.plot('scatter', 'offset', 'pitchClass')
+    #print_parts_countour(base_midi.measures(0, 6))
+    #base_midi.plot('histogram', 'pitchClass', 'count')
+    #base_midi.plot('scatter', 'offset', 'pitchClass')
     timeSignature = base_midi.getTimeSignatures()[0]
     music_analysis = base_midi.analyze('key')
     print("Music time signature: {0}/{1}".format(timeSignature.beatCount, timeSignature.denominator))
@@ -97,3 +183,5 @@ if __name__ == '__main__':
     for analysis in music_analysis.alternateInterpretations:
         if analysis.correlationCoefficient > 0.5:
             print(analysis)
+    song_chords = harmonic_reduction(base_midi)
+    print(song_chords)

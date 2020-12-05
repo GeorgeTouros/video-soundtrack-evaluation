@@ -6,16 +6,17 @@ import re
 title_re = re.compile("<meta message track_name name=\'(.*)\'")
 artist_re = re.compile("<meta message text text='Performed by:  (.*)\(|\'")
 
-file = './temp/test_dataset/Alice_Cooper_-_No_More_Mr._Nice_Guy.mid'
-
+file = './temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid'
 
 mid = MidiFile(str(file), clip=True)
 
-port = mido.open_outport('Port Name')
+outs = mido.get_output_names()
 
-for msg in mid.play():
-    port.send(msg)
-mid.play()
+port = mido.open_output(outs[1])
+
+# for msg in mid.play():
+#     port.send(msg)
+
 # There are three types of MIDI files:
 #
 # type 0 (single track): all messages are saved in one track
@@ -26,12 +27,12 @@ mid.play()
 
 
 # This allows you to see the track titles and how many messages are in each track.
-#for track in mid.tracks:
-#    print(track)
+for track in mid.tracks:
+    print(track)
 
 # This particular track contains only meta information about the MIDI file in general
 # such as the tempo and time signature
-# for msg in mid.tracks[1]:
+# for msg in mid.tracks[0]:
 #     title_search = re.search(title_re, str(msg))
 #     if title_search:
 #         title = title_search.group(1)
@@ -43,5 +44,3 @@ mid.play()
 #         if artist:
 #             print(artist)
 #     print(msg)
-
-
