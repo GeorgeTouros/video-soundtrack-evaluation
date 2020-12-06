@@ -5,25 +5,31 @@ import numpy as np
 
 
 class AudioFeatureExtractor():
-    def __init__(self):
-        pass
-
-    def extract_audio_features(self,
-                               file_path,
-                               mid_window=2,
-                               mid_step=1,
-                               short_window=0.05,
-                               short_step=0.025,
-                               get_names=True):
+    def __init__(self,
+                 mid_window=2,
+                 mid_step=1,
+                 short_window=0.05,
+                 short_step=0.025,
+                 get_names=True):
         """
-        Method to extract audio features from an audio file
-        :param file_path: Name of the audio file
         :param mid_window: the mid-term window in seconds
         :param mid_step: the mid-term step
         :param short_window: the short-term window
         :param short_step: the short-term step
         :param get_names: defines whether the function will return the feature names or not.
                 default value is False.
+        """
+        self.mid_window = mid_window,
+        self.mid_step = mid_step,
+        self.short_window = short_window,
+        self.short_step = short_step,
+        self.get_names = get_names
+        pass
+
+    def extract_audio_features(self, file_path):
+        """
+        Method to extract audio features from an audio file
+        :param file_path: Name of the audio file
         :return: Numpy array containing audio features,
                 (list of mid-feature names if get_names=True)
         """
@@ -36,11 +42,11 @@ class AudioFeatureExtractor():
         mid_term_features = np.array([])
         mid_features, short_features, mid_feature_names = \
             mid_feature_extraction(signal, sampling_rate,
-                                   round(mid_window * sampling_rate),
-                                   round(mid_step * sampling_rate),
-                                   round(sampling_rate * short_window),
-                                   round(sampling_rate * short_step))
-        beat, beat_conf = beat_extraction(short_features, short_step)
+                                   round(self.mid_window * sampling_rate),
+                                   round(self.mid_step * sampling_rate),
+                                   round(sampling_rate * self.short_window),
+                                   round(sampling_rate * self.short_step))
+        beat, beat_conf = beat_extraction(short_features, self.short_step)
         mid_features = np.transpose(mid_features)
         # long term averaging of mid-term statistics
         mid_features = mid_features.mean(axis=0)
@@ -56,7 +62,7 @@ class AudioFeatureExtractor():
             else:
                 mid_term_features = np.vstack((mid_term_features, mid_features))
 
-        if get_names:
+        if self.get_names:
             return mid_term_features, mid_feature_names
         else:
             return mid_term_features
