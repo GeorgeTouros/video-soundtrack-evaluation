@@ -16,9 +16,9 @@ except ProgrammingError:
     db = DatabaseHandler()
     db.create_db('dejavu')
     from fingerprinting import djv
-from media_manipulation.video_stream import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
+from media_manipulation.song_retrieval import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
     get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
-from media_manipulation.video_stream import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps
+from media_manipulation.song_retrieval import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps
 from media_manipulation.video_manipulation import blend_audio_with_video, crop_video_to_matches
 
 # set pandas print_options for debugging purposes
