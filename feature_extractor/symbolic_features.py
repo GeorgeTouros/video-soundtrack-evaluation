@@ -2,9 +2,11 @@ from music21 import *
 from music21.midi import translate
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
-environment.set('musicxmlPath', '/usr/bin/musescore3')
+from config.paths import musescore_path, lilypond_path
+
+environment.set('musicxmlPath', musescore_path)
 #environment.set('graphicsPath', '/usr/bin/lodraw')
-environment.set('lilypondPath', '/home/zappatistas20/bin/lilypond')
+environment.set('lilypondPath', lilypond_path)
 
 
 def open_midi(midi_path, remove_drums):
