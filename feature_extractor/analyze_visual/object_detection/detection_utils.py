@@ -1,8 +1,8 @@
 import copy
 import numpy as np
 import pandas as pd
-from utils.analyze_visual.utils import rect_area
-from utils.analyze_visual.utils import intersect_rectangles
+from feature_extractor.analyze_visual.utils import rect_area
+from feature_extractor.analyze_visual.utils import intersect_rectangles
 
 super_categories = {1: 'person',
                     2: 'vehicle',

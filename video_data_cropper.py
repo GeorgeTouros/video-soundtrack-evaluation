@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     db_connection = db.connection
 
-    with open('./sql/select_correct_videos.sql') as q_file:
+    with open('db_handler/sql/select_correct_videos.sql') as q_file:
         sql = q_file.read()
         vids = pd.read_sql(sql=sql, con=db_connection, index_col='id')
 

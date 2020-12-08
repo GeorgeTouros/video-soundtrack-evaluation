@@ -27,7 +27,7 @@ if __name__ == '__main__':
     db_connection = db.connection
 
     if not db.check_for_existing_tables('audio_video_matches'):
-        db.execute_from_file('./sql/create_audio_video_matches_table.sql')
+        db.execute_from_file('./db_handler/sql/create_audio_video_matches_table.sql')
 
     if args.tempdir:
         local_video_temp_dir = args.tempdir
