@@ -1,10 +1,11 @@
 import collections
 from urllib.error import HTTPError
-from utils.analyze_visual.object_detection import detection_utils as dutils, generic_model as gmodel
-from utils.analyze_visual.utils import *
+from feature_extractor.analyze_visual.object_detection import detection_utils as dutils, generic_model as gmodel
+from feature_extractor.analyze_visual.utils import *
 
 try:
     generic_model = gmodel.SsdNvidia()
+    no_ssd = False
 except HTTPError:
     no_ssd = True
     print("Couldn't download model from NVIDIA. Forget the deep features")

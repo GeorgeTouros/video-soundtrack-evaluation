@@ -1,5 +1,6 @@
 from feature_extractor.audio_features import AudioFeatureExtractor
 from feature_extractor.visual_features import VisualFeatureExtractor
+from feature_extractor.symbolic_features import SymbolicFeatureExtractor
 
 if __name__ == '__main__':
 
@@ -17,3 +18,7 @@ if __name__ == '__main__':
 
     for feature in mid_feature_names:
         print(feature)
+
+    m_e = SymbolicFeatureExtractor(quarter_length_divisors=(16,12))
+    m_file = './temp/test_dataset/M19182A50503_JOHN.Madman across the water K.mid'
+    symbolic_features, symbolic_feature_names = m_e.extract_symbolic_features(m_file)

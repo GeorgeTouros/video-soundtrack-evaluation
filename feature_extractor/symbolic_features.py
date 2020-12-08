@@ -9,21 +9,6 @@ environment.set('musicxmlPath', musescore_path)
 environment.set('lilypondPath', lilypond_path)
 
 
-def open_midi(midi_path, remove_drums):
-    # There is an one-line method to read MIDIs
-    # but to remove the drums we need to manipulate some
-    # low level MIDI events.
-    mf = midi.MidiFile()
-    mf.open(midi_path)
-    mf.read()
-    mf.close()
-    if remove_drums:
-        for i in range(len(mf.tracks)):
-            mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
-
-    return translate.midiFileToStream(mf)
-
-
 def list_instruments(midi):
     part_stream = midi.parts.stream()
     print("List of instruments found on MIDI file:")
@@ -159,20 +144,130 @@ def harmonic_reduction(midi_file):
     return ret
 
 
+class SymbolicFeatureExtractor(object):
+    def __init__(self, quarter_length_divisors=(4,3)):
+        """
+        :param quarter_length_divisors: tuple. (2,) will snap all events to eighth note grid.
+                                        (4, 3) will snap events to sixteenth notes and eighth note triplets,
+                                        whichever is closer. (4, 6) will snap events to sixteenth notes and
+                                        sixteenth note triplets. If quarterLengthDivisors is not specified
+                                        then the default is (4, 3).
+        """
+        self.quarter_length_divisors = quarter_length_divisors
+        self.parsed_stream = None
+        self.available_extractors = self.get_available_extractors()
+
+    @staticmethod
+    def get_available_extractors():
+        available_extractors = {}
+        ex_id = 0
+        fs = features.jSymbolic.extractorsById
+        for k in fs:
+            for i in range(len(fs[k])):
+                if fs[k][i] is not None:
+                    if fs[k][i] in features.jSymbolic.featureExtractors:
+                        n = fs[k][i].__name__
+                        available_extractors[ex_id] = {'type': k, 'ID': i, 'name': n, 'method': 'jSymbolic'}
+                        ex_id += 1
+
+        fsn = features.native.featureExtractors
+        for ext in fsn:
+            n = ext.__name__
+            available_extractors[ex_id] = {'name': n, 'method': 'native'}
+            ex_id += 1
+        return available_extractors
+
+    def print_formatted_feats(self):
+        for key, value in self.available_extractors.items():
+            print("\\hline \n {} & {} & {} & {} \\\\".format(key, value['method'], value['name'], ""))
+
+    def parse_midi(self, midi_path, remove_drums=True):
+        # There is an one-line method to read MIDIs
+        # but to remove the drums we need to manipulate some
+        # low level MIDI events.
+        mf = midi.MidiFile()
+        mf.open(midi_path)
+        mf.read()
+        mf.close()
+        if remove_drums:
+            for i in range(len(mf.tracks)):
+                mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
+        stream = translate.midiFileToStream(mf)
+        self.parsed_stream = stream.quantize(self.quarter_length_divisors)
+
+    def apply_extractor_jsymbolic(self, extractor):
+        fe = getattr(features.jSymbolic, extractor)(self.parsed_stream)
+        try:
+            f = fe.extract()
+            if extractor == 'InitialTimeSignatureFeature':
+                return [f.vector[0]/f.vector[1]]
+            else:
+                return f.vector
+        except TypeError:
+            print('error extracting {}'.format(extractor) )
+            return None
+        except features.jSymbolic.JSymbolicFeatureException:
+            print('error extracting {}'.format(extractor))
+            return None
+
+    def apply_extractor_native(self, extractor):
+        fe = getattr(features.native, extractor)(self.parsed_stream)
+        try:
+            f = fe.extract()
+            return f.vector
+        except TypeError:
+            print('error extracting {}'.format(extractor) )
+            return None
+
+    def extract_symbolic_features(self, midi_path, accept_multivalues=False):
+        self.parse_midi(midi_path)
+        feats = {}
+        for extractor_method in self.available_extractors.values():
+            if extractor_method['method'] == 'jSymbolic':
+                v = self.apply_extractor_jsymbolic(extractor_method['name'])
+            else:
+                v = self.apply_extractor_native(extractor_method['name'])
+            try:
+                if accept_multivalues or len(v) == 1:
+                    feats[extractor_method['name']] = v
+                else:
+                    feats[extractor_method['name']] = None
+            except TypeError:
+                feats[extractor_method['name']] = None
+        return feats.values(), feats.keys()
+
+    def melodic_interval_histogram(self):
+        fe = features.jSymbolic.MelodicIntervalHistogramFeature(self.parsed_stream)
+        f = fe.extract()
+        return f.vector
+
+    def most_common_interval(self):
+        fe = features.jSymbolic.MostCommonMelodicIntervalFeature(self.parsed_stream)
+        f = fe.extract()
+        return f.vector
+
+    def most_common_pitch(self):
+        fe = features.jSymbolic.MostCommonPitchClassFeature(self.parsed_stream)
+        f = fe.extract()
+        return f.vector
+
+    def minimum_note_duration(self):
+        fe = features.jSymbolic.MinimumNoteDurationFeature(self.parsed_stream)
+        f = fe.extract()
+        return f.vector
+
+
+
 if __name__ == '__main__':
-    # mf = midi.MidiFile()
-    # mf.open('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid')
-    # mf.read()
-    # print(mf.format)
-    # mf.close()
-    # base_midi = translate.midiStringToStream()
-    base_midi = converter.parse('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid', format='midi',
-                                forceSource=True, quantizePost=True,
-                                quarterLengthDivisors=(16, 12))
-    # base_midi = open_midi('../temp/test_dataset/M19182A50503_JOHN.Madman across the water K.mid', False)
-    # base_midi = base_midi.quantize(processDurations=True)
-    #base_midi.show()
-    list_instruments(base_midi)
+    s = SymbolicFeatureExtractor(quarter_length_divisors=(16,12))
+    all_feats = s.extract_symbolic_features(midi_path='../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid')
+    # base_midi = s.extract_symbolic_features(
+    #     midi_path='../temp/test_dataset/M19182A50503_JOHN.Madman across the water K.mid')
+    # base_midi = converter.parse('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid', format='midi',
+    #                             forceSource=True, quantizePost=True,
+    #                             quarterLengthDivisors=(16, 12))
+    # base_midi.show()
+    # list_instruments(base_midi)
     #print_parts_countour(base_midi.measures(0, 6))
     #base_midi.plot('histogram', 'pitchClass', 'count')
     #base_midi.plot('scatter', 'offset', 'pitchClass')
