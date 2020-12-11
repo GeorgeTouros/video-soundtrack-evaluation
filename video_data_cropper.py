@@ -22,12 +22,12 @@ if __name__ == '__main__':
     # get input absolute path
     vids['input_name'] = vids['directory'] + '/' + vids['filename']
     # create the result title
-    vids['target_name'] = 'V' + vids['id'] + '_' + vids['start'].astype('str') + '.' + vids['video_type']
+    vids['target_name'] = 'V' + vids.index.astype('str') + '_' + vids['start'].astype('str') + '.' + vids['video_type']
 
     video_path = get_collection_directory('video')
     os.chdir(video_path)
 
-    target_dir = setup_curated_video_dir()
+    target_dir = video_path
 
     vids['length'] = round(vids['end'] / 1000 - vids['start'] / 1000, 0)
 
