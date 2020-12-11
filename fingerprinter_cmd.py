@@ -21,11 +21,6 @@ args = parser.parse_args()
 
 
 if __name__ == '__main__':
-    collected_audio_dir = get_collection_directory('audio')
-
-    # if not check_if_all_files_in_temp_dir(collected_audio_dir, local_audio_temp_dir):
-    #     print("converting to lower quality mono file")
-    #     copy_and_convert_dir(collected_audio_dir, local_audio_temp_dir, sample_rate=16000, channels=1)
     if args.tempdir:
         local_audio_temp_dir = args.tempdir
         print("start making fingerprints")
