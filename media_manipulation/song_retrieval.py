@@ -196,33 +196,3 @@ def get_crop_timestamps(df):
                                                        "invalid_mode": "max"})
     tims.reset_index(inplace=True)
     return tims
-
-
-if __name__ == '__main__':
-    test_file_path = r"/home/zappatistas20/Videos/Full Metal Jacket (1987)/Full.Metal.Jacket.1987.720p.BrRip.YIFY.mp4"
-    # extract_audio_chunks_from_video(test_file_path, 5*1000)
-    # matches = find_songs_in_temp_dir()
-    # match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-    #                                                       'song_name', 'input_confidence', 'offset', 'offset_seconds'])
-    # match_df.sort_values(by='start', inplace=True)
-    # match_df.to_csv('../var/test_fingerprints.csv', index=False)
-    match_df = pd.read_csv('../var/test_fingerprints.csv')
-    match_df.sort_values(by='start', inplace=True)
-    match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-    match_df.sort_values(by='start', inplace=True)
-    match_df['song_id'], match_df['offset_seconds'] = zip(*match_df.apply(func=smooth_chunk_matches, axis=1))
-    match_df.sort_values(by='start', inplace=True)
-    match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-    match_df.sort_values(by='start', inplace=True)
-    match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
-    match_df.sort_values(by='start', inplace=True)
-    match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
-    match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
-    match_df = flag_possible_errors(match_df)
-    trimmer_df = get_crop_timestamps(match_df)
-    crop_video_to_matches(trimmer_df, test_file_path, '../var/')
-    match_df.to_csv('../var/test_smoothing.csv', index=False)
-    print('Done')
-    # res = ask_dejavu(temp_dir+'vid_chunk__2730000__2760000.mp3')
-    # res = ask_dejavu('/home/zappatistas20/PycharmProjects/thesis_dataset_creation/temp/M25067A142098_11  NANCY SINATRA - THESE BOOTS ARE MADE FOR WALKING.mp3')
-    # print(res['results'])
