@@ -127,43 +127,6 @@ if __name__ == '__main__':
                                                                 if_exists='replace')
         merged.to_csv('var/midi_audio_matches.csv', index=False)
 
-    if mode in ['clip_finder', 'all']:
-        video_paths = pd.read_sql_table('video_catalog', con=db_connection)
-
-        for video_id in video_paths[video_paths['searched'] == 0]['id'].values:
-            video_path = video_paths[video_paths['id'] == video_id]['full_path'].values[0]
-            file_type = video_paths[video_paths['id'] == video_id]['file_type'].values[0]
-            extract_audio_chunks_from_video(video_path, 5 * 1000, file_type)
-            matches = find_songs_in_temp_dir(video_id)
-            match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-                                                                   'song_name', 'input_confidence', 'offset',
-                                                                   'offset_seconds'])
-            match_df.sort_values(by='start', inplace=True)
-            match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-            match_df.sort_values(by='start', inplace=True)
-            match_df['song_id'], match_df['offset_seconds'] = zip(*match_df.apply(func=smooth_chunk_matches, axis=1))
-            match_df.sort_values(by='start', inplace=True)
-            match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-            match_df.sort_values(by='start', inplace=True)
-            match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
-            match_df.sort_values(by='start', inplace=True)
-            match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
-            match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
-            match_df = flag_possible_errors(match_df)
-            if len(match_df) > 0:
-                trimmer_df = get_crop_timestamps(match_df)
-                trimmer_df['video_audio_match_id'] = trimmer_df['song_id'].apply(get_video_audio_match_ids, args=[int(video_id)])
-                trimmer_df['video_type'] = file_type
-                trimmer_df['video_id'] = video_id
-                crop_video_to_matches(trimmer_df, video_path, collected_data_path + 'video/')
-                trimmer_df.to_sql('audio_video_matches', con=db_connection, index=True, if_exists='append')
-            db.update_value(table_name='video_catalog',
-                            column_name='searched',
-                            value=0,
-                            where="id = {}".format(video_id))
-            purge_temp_folder(get_temp_directory('video'))
-            print('Completed work for ' + video_path)
-
     if mode in ['make_test', 'all']:
 
         os.chdir('./temp/test_dataset/')
