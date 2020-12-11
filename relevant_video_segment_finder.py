@@ -1,12 +1,10 @@
 import pandas as pd
-from utils.catalog_utils import get_video_audio_match_ids, purge_temp_folder
+from utils.catalog_utils import purge_temp_folder
 from db_handler.db_handler import DatabaseHandler
-from config.paths import collected_data_path
 from sqlalchemy import exc
 from media_manipulation.song_retrieval import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
     get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
 from media_manipulation.song_retrieval import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps
-from media_manipulation.video_manipulation import crop_video_to_matches
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -76,14 +74,11 @@ if __name__ == '__main__':
         match_df.to_csv('./var/match_post_cleanup_{}.csv'.format(video_id))
         if len(match_df) > 0:
             trimmer_df = get_crop_timestamps(match_df)
-            # trimmer_df['video_audio_match_id'] = trimmer_df['song_id'].apply(get_video_audio_match_ids,
-            #                                                                  args=[int(video_id)])
             trimmer_df['video_type'] = file_type
             trimmer_df['video_id'] = video_id
             trimmer_df['real'] = 1
             trimmer_df = trimmer_df.drop(columns='match_id')
             trimmer_df = trimmer_df.rename(mapper={'song_id': 'djv_song_id'}, axis=1)
-            # trimmer_df.apply(lambda row: crop_video_to_matches(row, video_path, collected_data_path + 'video/'), axis=1)
             trimmer_df.to_sql('audio_video_matches', con=db_connection, index=False, if_exists='append', method='multi')
         db.update_value(table_name='video_catalog',
                         column_name='searched',

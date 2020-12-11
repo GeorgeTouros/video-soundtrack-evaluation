@@ -25,15 +25,6 @@ def extract_subclip(input_video, start_timestamp, end_timestamp, targetname):
     subprocess.call(cmd, shell=True)
 
 
-def crop_video_to_matches(trim_df, video_path, target_folder):
-    start_time = trim_df['start']
-    end_time = trim_df['end']
-    target_id = trim_df['video_audio_match_id']
-    file_type = trim_df['video_type']
-    target_name = target_folder + target_id + '_' + str(start_time) + '.' + file_type
-    extract_subclip(video_path, int(start_time) / 1000, int(end_time) / 1000,
-                    targetname=target_name)
-
 
 def get_cropped_target_name(input_file, target_directory, index, file_type='.mp4'):
     stripped = input_file[:-4]
