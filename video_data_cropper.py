@@ -19,10 +19,10 @@ if __name__ == '__main__':
     with open('db_handler/sql/select_correct_videos.sql') as q_file:
         sql = q_file.read()
         vids = pd.read_sql(sql=sql, con=db_connection, index_col='id')
-
+    # get input absolute path
     vids['input_name'] = vids['directory'] + '/' + vids['filename']
-
-    vids['target_name'] = vids['video_audio_match_id'] + '_' + vids['start'].astype('str') + '.' + vids['video_type']
+    # create the result title
+    vids['target_name'] = 'V' + vids['id'] + '_' + vids['start'].astype('str') + '.' + vids['video_type']
 
     video_path = get_collection_directory('video')
     os.chdir(video_path)

@@ -76,12 +76,15 @@ if __name__ == '__main__':
         match_df.to_csv('./var/match_post_cleanup_{}.csv'.format(video_id))
         if len(match_df) > 0:
             trimmer_df = get_crop_timestamps(match_df)
-            trimmer_df['video_audio_match_id'] = trimmer_df['song_id'].apply(get_video_audio_match_ids,
-                                                                             args=[int(video_id)])
+            # trimmer_df['video_audio_match_id'] = trimmer_df['song_id'].apply(get_video_audio_match_ids,
+            #                                                                  args=[int(video_id)])
             trimmer_df['video_type'] = file_type
             trimmer_df['video_id'] = video_id
-            trimmer_df.apply(lambda row: crop_video_to_matches(row, video_path, collected_data_path + 'video/'), axis=1)
-            trimmer_df.to_sql('audio_video_matches', con=db_connection, index=False, if_exists='append')
+            trimmer_df['real'] = 1
+            trimmer_df = trimmer_df.drop(columns='match_id')
+            trimmer_df = trimmer_df.rename(mapper={'song_id': 'djv_song_id'}, axis=1)
+            # trimmer_df.apply(lambda row: crop_video_to_matches(row, video_path, collected_data_path + 'video/'), axis=1)
+            trimmer_df.to_sql('audio_video_matches', con=db_connection, index=False, if_exists='append', method='multi')
         db.update_value(table_name='video_catalog',
                         column_name='searched',
                         value=1,

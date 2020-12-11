@@ -3,7 +3,7 @@ SELECT
 FROM
     file_system_catalogs.audio_video_matches vm
        LEFT JOIN
-    dejavu.songs s ON s.song_id = vm.song_id
+    dejavu.songs s ON s.song_id = vm.djv_song_id
        LEFT JOIN
 	file_system_catalogs.video_catalog vc ON vc.id = vm.video_id
 	   LEFT JOIN
