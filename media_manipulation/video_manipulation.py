@@ -2,9 +2,6 @@ import subprocess
 from shlex import quote
 
 
-# ffmpeg -i 'barry.s01e01.720p.web.h264-tbs[ettv].mkv' -i 'M414A5061_Alice Cooper - No More Mr. Nice Guy.mp3' -filter_complex "[1]adelay=62000,volume=2.0[aud];[0:1]volume=2.0[sa];[sa][aud]amix" -c:v copy out.mp4
-
-
 def blend_audio_with_video(input_video, input_audio, output_video, delay):
     in_v = "-i '{}' ".format(input_video)
     in_a = "-i '{}' ".format(input_audio)
@@ -23,7 +20,6 @@ def extract_subclip(input_video, start_timestamp, end_timestamp, targetname):
     codecs = " -map 0 -c:v libx264 -preset superfast -crf 17 -acodec copy -sn "
     cmd = "ffmpeg -y" + search_start + in_v + search_length + codecs + targetname
     subprocess.call(cmd, shell=True)
-
 
 
 def get_cropped_target_name(input_file, target_directory, index, file_type='.mp4'):
