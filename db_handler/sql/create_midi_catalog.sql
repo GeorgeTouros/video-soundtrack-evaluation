@@ -1,6 +1,6 @@
 create table file_system_catalogs.midi_catalog
 (
-	id bigint not null,
+	id bigint not null auto_increment,
 	directory text null,
 	filename text null,
 	title text null,

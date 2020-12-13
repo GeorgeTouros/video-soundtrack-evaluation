@@ -66,7 +66,12 @@ if __name__ == '__main__':
         midi_catalog = cleanup_file_titles(midi_catalog, "midi", allow_numbers=True)
         midi_catalog = get_clean_song_titles_from_spotify(midi_catalog)
         midi_catalog.drop_duplicates(inplace=True)
-        midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
+        try:
+            already_there = pd.read_sql_table('midi_catalog', con=db_connection)
+            midi_catalog = midi_catalog.loc[~midi_catalog['filename'].isin(already_there['filename'])]
+            midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
+        except ValueError:
+            midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
 
         matches = midi_catalog[midi_catalog['spotify_name'].notna()]
         recall = 100 * len(matches) / len(midi_catalog)
@@ -82,7 +87,12 @@ if __name__ == '__main__':
         audio_catalog = cleanup_file_titles(audio_catalog, "audio")
         audio_catalog = get_clean_song_titles_from_spotify(audio_catalog)
         audio_catalog.drop_duplicates(inplace=True)
-        audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
+        try:
+            already_there = pd.read_sql_table('audio_catalog', con=db_connection)
+            audio_catalog = audio_catalog.loc[~audio_catalog['filename'].isin(already_there['filename'])]
+            audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
+        except ValueError:
+            audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
         print('finish audio catalog')
 
     if mode in ['video', 'all']:
@@ -105,6 +115,8 @@ if __name__ == '__main__':
 
     if mode in ['merge', 'all']:
         print('Loading tables')
+        if not db.check_for_existing_tables('midi_audio_matches'):
+            db.execute_from_file('./db_handler/sql/create_audio_video_matches_table.sql')
         midi = pd.read_sql_table('midi_catalog', con=db_connection)
         audio = pd.read_sql_table('audio_catalog', con=db_connection)
         pos_midi = midi[midi['spotify_name'].notna()]
@@ -118,10 +130,19 @@ if __name__ == '__main__':
         print('collecting the files')
         merged['pair_id'] = merged.apply(collect_matched_files, new_midi_path=new_midi_dir,
                                          new_audio_path=new_audio_dir, axis=1)
-        print('write to db and dump to csv')
-        merged[['pair_id', 'index_midi', 'index_audio']].to_sql('midi_audio_matches',
-                                                                con=db_connection,
-                                                                index=False,
-                                                                if_exists='replace')
+        merged['djv_song_id'] = 'null'
+        print('writing to db')
+        try:
+            already_there = pd.read_sql_table('midi_audio_matches', con=db_connection)
+            merged = merged.loc[~merged['pair_id'].isin(already_there['pair_id'])]
+            merged[['pair_id', 'index_midi', 'index_audio', 'djv_song_id']].to_sql('midi_audio_matches',
+                                                                                   con=db_connection,
+                                                                                   index=False,
+                                                                                   if_exists='append')
+        except ValueError:
+            merged[['pair_id', 'index_midi', 'index_audio', 'djv_song_id']].to_sql('midi_audio_matches',
+                                                                                   con=db_connection,
+                                                                                   index=False,
+                                                                                   if_exists='append')
 
     script_run_time()
