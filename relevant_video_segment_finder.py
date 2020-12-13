@@ -68,10 +68,8 @@ if __name__ == '__main__':
         match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
         match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
         match_df.sort_values(by='start', inplace=True)
-        match_df.to_csv('./var/match_pre_cleanup_{}.csv'.format(video_id))
         match_df = flag_possible_errors(match_df)
         match_df = match_df[match_df['too_small'] == 0]
-        match_df.to_csv('./var/match_post_cleanup_{}.csv'.format(video_id))
         if len(match_df) > 0:
             trimmer_df = get_crop_timestamps(match_df)
             trimmer_df['video_type'] = file_type
@@ -79,7 +77,22 @@ if __name__ == '__main__':
             trimmer_df['real'] = 1
             trimmer_df = trimmer_df.drop(columns='match_id')
             trimmer_df = trimmer_df.rename(mapper={'song_id': 'djv_song_id'}, axis=1)
-            trimmer_df.to_sql('audio_video_matches', con=db_connection, index=False, if_exists='append', method='multi')
+
+            video_clips = trimmer_df[['video_id', 'start', 'end', 'video_type']].drop_duplicates
+            video_clips.to_sql('video_clips_catalog', con=db_connection, index=False, if_exists='append')
+
+            vcc = pd.read_sql_table('video_clip_catalog', con=db_connection, index_col='id')
+            vcc.rename(mapper={'id': 'clip_id'}, axis=1)
+
+            joined = pd.merge(left=trimmer_df, right=vcc,
+                              left_on=['video_id', 'start'], right_on=['video_id', 'start'],
+                              how='inner')
+
+            joined[['djv_song_id', 'invalid_mode', 'real', 'clip_id']].to_sql('audio_video_matches',
+                                                                              con=db_connection,
+                                                                              index=False,
+                                                                              if_exists='append',
+                                                                              method='multi')
         db.update_value(table_name='video_catalog',
                         column_name='searched',
                         value=1,

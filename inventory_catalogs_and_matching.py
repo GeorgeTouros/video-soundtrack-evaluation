@@ -68,7 +68,7 @@ if __name__ == '__main__':
         midi_catalog = get_clean_song_titles_from_spotify(midi_catalog)
         midi_catalog.drop_duplicates(inplace=True)
         midi_catalog.to_csv(r'var/midi_catalog.csv', index=False)
-        midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='replace')
+        midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
 
         matches = midi_catalog[midi_catalog['spotify_name'].notna()]
         recall = 100 * len(matches) / len(midi_catalog)
@@ -83,13 +83,13 @@ if __name__ == '__main__':
         audio_catalog = get_clean_song_titles_from_spotify(audio_catalog)
         audio_catalog.drop_duplicates(inplace=True)
         audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
-        audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='replace')
+        audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
         print('finish audio catalog')
 
     if mode in ['video', 'all']:
         # continue with the video files
         if not db.check_for_existing_tables('video_catalog'):
-            db.execute_from_file('./sql/create_video_catalog.sql')
+            db.execute_from_file('./db_handler/sql/create_video_catalog.sql')
         print('start video catalog')
         video_catalog = create_catalog(video_path, except_file=irrelevant_files)
         video_catalog = cleanup_file_titles(video_catalog, "video", allow_numbers=True)
