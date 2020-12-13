@@ -33,13 +33,13 @@ if __name__ == '__main__':
 
     vids['no_of_vids'] = vids['length'].apply(lambda x: floor(x / 15))
 
-    vids.apply(func=lambda row: video_chunker(row['input_name'],
-                                              target_dir,
-                                              row['target_name'],
-                                              '.mp4',
-                                              row['length'],
-                                              15,
-                                              row['start']),
+    vids.apply(func=lambda row: video_chunker(input_file=row['input_name'],
+                                              target_directory=target_dir,
+                                              target_name=row['target_name'],
+                                              file_type='.mp4',
+                                              file_length=row['length'],
+                                              chunk_size=row['length'],
+                                              start=row['start']),
                axis=1)
 
     print('Your work is done master.')
