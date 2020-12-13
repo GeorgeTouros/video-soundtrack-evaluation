@@ -39,7 +39,6 @@ if __name__ == '__main__':
     # we will remove the windows hidden files
     irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 
-    print('Connecting to DB')
     try:
         db = DatabaseHandler('file_system_catalogs')
     except exc.OperationalError:
@@ -62,10 +61,11 @@ if __name__ == '__main__':
 
         # clean -up the midi title names
         print('start midi catalog cleanup')
+        if not db.check_for_existing_tables('midi_catalog'):
+            db.execute_from_file('./db_handler/sql/create_midi_catalog.sql')
         midi_catalog = cleanup_file_titles(midi_catalog, "midi", allow_numbers=True)
         midi_catalog = get_clean_song_titles_from_spotify(midi_catalog)
         midi_catalog.drop_duplicates(inplace=True)
-        midi_catalog.to_csv(r'var/midi_catalog.csv', index=False)
         midi_catalog.to_sql('midi_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
 
         matches = midi_catalog[midi_catalog['spotify_name'].notna()]
@@ -76,11 +76,12 @@ if __name__ == '__main__':
     if mode in ["audio", "all"]:
         # continue with the audio files
         print('start audio catalog')
+        if not db.check_for_existing_tables('audio_catalog'):
+            db.execute_from_file('./db_handler/sql/create_audio_catalog.sql')
         audio_catalog = create_catalog(audio_path, except_file=irrelevant_files, except_dir=['Bootlegs'])
         audio_catalog = cleanup_file_titles(audio_catalog, "audio")
         audio_catalog = get_clean_song_titles_from_spotify(audio_catalog)
         audio_catalog.drop_duplicates(inplace=True)
-        audio_catalog.to_csv(r'var/audio_catalog.csv', index=False)
         audio_catalog.to_sql('audio_catalog', con=db_connection, if_exists='append', index=False, index_label='id')
         print('finish audio catalog')
 
@@ -91,7 +92,6 @@ if __name__ == '__main__':
         print('start video catalog')
         video_catalog = create_catalog(video_path, except_file=irrelevant_files)
         video_catalog = cleanup_file_titles(video_catalog, "video", allow_numbers=True)
-        # video_catalog = get_clean_video_titles(video_catalog)
         video_catalog['full_path'] = video_catalog['directory'] + '/' + video_catalog['filename']
         video_catalog['searched'] = 0
         try:
