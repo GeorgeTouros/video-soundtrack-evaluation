@@ -3,10 +3,41 @@ from music21.midi import translate
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from config.paths import musescore_path, lilypond_path
+from mido import MidiFile
+import mido
 
 environment.set('musicxmlPath', musescore_path)
-#environment.set('graphicsPath', '/usr/bin/lodraw')
+# environment.set('graphicsPath', '/usr/bin/lodraw')
 environment.set('lilypondPath', lilypond_path)
+
+KEEP_FEATS = ['AverageMelodicIntervalFeature', 'MostCommonMelodicIntervalFeature',
+              'DistanceBetweenMostCommonMelodicIntervalsFeature', 'MostCommonMelodicIntervalPrevalenceFeature',
+              'RelativeStrengthOfMostCommonIntervalsFeature', 'NumberOfCommonMelodicIntervalsFeature',
+              'AmountOfArpeggiationFeature', 'RepeatedNotesFeature', 'ChromaticMotionFeature', 'StepwiseMotionFeature',
+              'MelodicThirdsFeature', 'MelodicFifthsFeature', 'MelodicTritonesFeature', 'MelodicOctavesFeature',
+              'DirectionOfMotionFeature', 'DurationOfMelodicArcsFeature', 'SizeOfMelodicArcsFeature',
+              'MostCommonPitchPrevalenceFeature', 'MostCommonPitchClassPrevalenceFeature',
+              'RelativeStrengthOfTopPitchesFeature', 'RelativeStrengthOfTopPitchClassesFeature',
+              'IntervalBetweenStrongestPitchesFeature', 'IntervalBetweenStrongestPitchClassesFeature',
+              'NumberOfCommonPitchesFeature', 'PitchVarietyFeature', 'PitchClassVarietyFeature', 'RangeFeature',
+              'MostCommonPitchFeature', 'PrimaryRegisterFeature', 'ImportanceOfBassRegisterFeature',
+              'ImportanceOfMiddleRegisterFeature', 'ImportanceOfHighRegisterFeature', 'MostCommonPitchClassFeature',
+              'NoteDensityFeature', 'AverageNoteDurationFeature', 'VariabilityOfNoteDurationFeature',
+              'MaximumNoteDurationFeature', 'MinimumNoteDurationFeature', 'StaccatoIncidenceFeature',
+              'AverageTimeBetweenAttacksFeature', 'VariabilityOfTimeBetweenAttacksFeature',
+              'AverageTimeBetweenAttacksForEachVoiceFeature',
+              'AverageVariabilityOfTimeBetweenAttacksForEachVoiceFeature', 'InitialTempoFeature',
+              'InitialTimeSignatureFeature', 'CompoundOrSimpleMeterFeature', 'TripleMeterFeature',
+              'QuintupleMeterFeature', 'ChangesOfMeterFeature', 'DurationFeature',
+              'MaximumNumberOfIndependentVoicesFeature', 'AverageNumberOfIndependentVoicesFeature',
+              'VariabilityOfNumberOfIndependentVoicesFeature', 'QualityFeature', 'TonalCertainty',
+              'UniqueNoteQuarterLengths', 'MostCommonNoteQuarterLength', 'MostCommonNoteQuarterLengthPrevalence',
+              'RangeOfNoteQuarterLengths', 'UniquePitchClassSetSimultaneities', 'UniqueSetClassSimultaneities',
+              'MostCommonPitchClassSetSimultaneityPrevalence', 'MostCommonSetClassSimultaneityPrevalence',
+              'MajorTriadSimultaneityPrevalence', 'MinorTriadSimultaneityPrevalence',
+              'DominantSeventhSimultaneityPrevalence', 'DiminishedTriadSimultaneityPrevalence',
+              'TriadSimultaneityPrevalence', 'DiminishedSeventhSimultaneityPrevalence',
+              'IncorrectlySpelledTriadPrevalence', 'ComposerPopularity', 'LandiniCadence', 'LanguageFeature']
 
 
 def list_instruments(midi):
@@ -145,7 +176,7 @@ def harmonic_reduction(midi_file):
 
 
 class SymbolicFeatureExtractor(object):
-    def __init__(self, quarter_length_divisors=(4,3)):
+    def __init__(self, quarter_length_divisors=(4, 3), get_names=True):
         """
         :param quarter_length_divisors: tuple. (2,) will snap all events to eighth note grid.
                                         (4, 3) will snap events to sixteenth notes and eighth note triplets,
@@ -156,6 +187,11 @@ class SymbolicFeatureExtractor(object):
         self.quarter_length_divisors = quarter_length_divisors
         self.parsed_stream = None
         self.available_extractors = self.get_available_extractors()
+        self.instruments = []
+        self.duration_in_secs = None
+        self.file_path = None
+        self.multi_value_feats = []
+        self.get_names = get_names
 
     @staticmethod
     def get_available_extractors():
@@ -167,32 +203,65 @@ class SymbolicFeatureExtractor(object):
                 if fs[k][i] is not None:
                     if fs[k][i] in features.jSymbolic.featureExtractors:
                         n = fs[k][i].__name__
-                        available_extractors[ex_id] = {'type': k, 'ID': i, 'name': n, 'method': 'jSymbolic'}
-                        ex_id += 1
+                        if n != 'QualityFeature' and n in KEEP_FEATS:
+                            available_extractors[ex_id] = {'type': k, 'ID': i, 'name': n, 'method': 'jSymbolic'}
+                            ex_id += 1
 
         fsn = features.native.featureExtractors
         for ext in fsn:
             n = ext.__name__
-            available_extractors[ex_id] = {'name': n, 'method': 'native'}
-            ex_id += 1
+            if n in KEEP_FEATS:
+                available_extractors[ex_id] = {'name': n, 'method': 'native'}
+                ex_id += 1
         return available_extractors
 
     def print_formatted_feats(self):
         for key, value in self.available_extractors.items():
-            print("\\hline \n {} & {} & {} & {} \\\\".format(key, value['method'], value['name'], ""))
+            print("\\hline \n {} & {} & {} & {} \\\\".format(key+1, value['method'], value['name'], ""))
+
+    def get_feature_names(self):
+        names = []
+        for v in self.available_extractors.values():
+            names.append(v['name'])
+        return names
+
+    def remove_drums(self):
+        keep_inst = []
+        for i, inst in enumerate(self.instruments):
+            try:
+                name = str(inst.name)
+                lower_inst = name.lower()
+                if lower_inst.find('drums') < 0 and lower_inst.find('percussion') < 0:
+                    keep_inst.append(i)
+            except AttributeError:
+                keep_inst.append(i)
+        return keep_inst
+
+    def preprocess_with_mido(self):
+        mid = MidiFile(filename=self.file_path, clip=True)
+        self.instruments = mid.tracks
+        self.duration_in_secs = mid.length
 
     def parse_midi(self, midi_path, remove_drums=True):
         # There is an one-line method to read MIDIs
         # but to remove the drums we need to manipulate some
         # low level MIDI events.
+        self.file_path = midi_path
+        try:
+            self.preprocess_with_mido()
+        except EOFError:
+            remove_drums = False
+        if remove_drums:
+            keep_instruments = self.remove_drums()
         mf = midi.MidiFile()
-        mf.open(midi_path)
+        mf.open(self.file_path)
         mf.read()
         mf.close()
         if remove_drums:
             for i in range(len(mf.tracks)):
-                mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
+                mf.tracks[i].events = [ev for ev in mf.tracks[i].events if i in keep_instruments]
         stream = translate.midiFileToStream(mf)
+
         self.parsed_stream = stream.quantize(self.quarter_length_divisors)
 
     def apply_extractor_jsymbolic(self, extractor):
@@ -200,15 +269,18 @@ class SymbolicFeatureExtractor(object):
         try:
             f = fe.extract()
             if extractor == 'InitialTimeSignatureFeature':
-                return [f.vector[0]/f.vector[1]]
+                try:
+                    return [f.vector[0] / f.vector[1]]
+                except ZeroDivisionError:
+                    return 'null'
             else:
                 return f.vector
         except TypeError:
-            print('error extracting {}'.format(extractor) )
-            return None
+            print('error extracting {}'.format(extractor))
+            return 'null'
         except features.jSymbolic.JSymbolicFeatureException:
             print('error extracting {}'.format(extractor))
-            return None
+            return 'null'
 
     def apply_extractor_native(self, extractor):
         fe = getattr(features.native, extractor)(self.parsed_stream)
@@ -216,8 +288,11 @@ class SymbolicFeatureExtractor(object):
             f = fe.extract()
             return f.vector
         except TypeError:
-            print('error extracting {}'.format(extractor) )
-            return None
+            print('error extracting {}'.format(extractor))
+            return 'null'
+        except features.native.NativeFeatureException:
+            print('error extracting {}'.format(extractor))
+            return 'null'
 
     def extract_symbolic_features(self, midi_path, accept_multivalues=False):
         self.parse_midi(midi_path)
@@ -229,12 +304,16 @@ class SymbolicFeatureExtractor(object):
                 v = self.apply_extractor_native(extractor_method['name'])
             try:
                 if accept_multivalues or len(v) == 1:
-                    feats[extractor_method['name']] = v
+                    feats[extractor_method['name']] = v[0]
                 else:
-                    feats[extractor_method['name']] = None
+                    feats[extractor_method['name']] = 'null'
             except TypeError:
-                feats[extractor_method['name']] = None
-        return feats.values(), feats.keys()
+                feats[extractor_method['name']] = 'null'
+        # feats['PlaybackDuration'] = self.duration_in_secs
+        if self.get_names:
+            return list(feats.values()), list(feats.keys())
+        else:
+            return list(feats.values())
 
     def melodic_interval_histogram(self):
         fe = features.jSymbolic.MelodicIntervalHistogramFeature(self.parsed_stream)
@@ -255,30 +334,3 @@ class SymbolicFeatureExtractor(object):
         fe = features.jSymbolic.MinimumNoteDurationFeature(self.parsed_stream)
         f = fe.extract()
         return f.vector
-
-
-
-if __name__ == '__main__':
-    s = SymbolicFeatureExtractor(quarter_length_divisors=(16,12))
-    all_feats = s.extract_symbolic_features(midi_path='../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid')
-    # base_midi = s.extract_symbolic_features(
-    #     midi_path='../temp/test_dataset/M19182A50503_JOHN.Madman across the water K.mid')
-    # base_midi = converter.parse('../temp/test_dataset/0a2d626401e49eb46c59ec6dbd4f048fa305b001.mid', format='midi',
-    #                             forceSource=True, quantizePost=True,
-    #                             quarterLengthDivisors=(16, 12))
-    # base_midi.show()
-    # list_instruments(base_midi)
-    #print_parts_countour(base_midi.measures(0, 6))
-    #base_midi.plot('histogram', 'pitchClass', 'count')
-    #base_midi.plot('scatter', 'offset', 'pitchClass')
-    timeSignature = base_midi.getTimeSignatures()[0]
-    music_analysis = base_midi.analyze('key')
-    print("Music time signature: {0}/{1}".format(timeSignature.beatCount, timeSignature.denominator))
-    print("Expected music key: {0}".format(music_analysis))
-    print("Music key confidence: {0}".format(music_analysis.correlationCoefficient))
-    print("Other music key alternatives:")
-    for analysis in music_analysis.alternateInterpretations:
-        if analysis.correlationCoefficient > 0.5:
-            print(analysis)
-    song_chords = harmonic_reduction(base_midi)
-    print(song_chords)

@@ -12,7 +12,7 @@ except HTTPError:
 
 
 class VisualFeatureExtractor(object):
-    def __init__(self, process_mode):
+    def __init__(self, process_mode, get_names=True):
         """
         :param process_mode: Processing modes:
             - 0 : No processing
@@ -31,8 +31,8 @@ class VisualFeatureExtractor(object):
             self.max_frames = 3
 
         if self.process_mode == 3:
-            # --------------------------------------------------------------------
             self.which_object_categories = 2  # which object categories to store as features
+            # --------------------------------------------------------------------
             """
             Takes values:
                 0: returns features for all 80 categories
@@ -41,9 +41,41 @@ class VisualFeatureExtractor(object):
 
             """
             # --------------------------------------------------------------------
+        else:
+            self.which_object_categories = 0
+        self.get_names = get_names
+        self.feature_names, self.feature_names_stats = get_features_names(self.process_mode,
+                                                                          self.which_object_categories)
+
+    def get_features_names(self, scope=0):
+        """
+        :param scope: 0 returns all, 1 returns only the mid-term features names, 2 returns long-term statistics names
+        :return: if 0, returns 2 lists, else returns a single list
+        """
+        if scope == 0:
+            return self.feature_names, self.feature_names_stats
+        elif scope == 1:
+            return self.feature_names
+        elif scope == 2:
+            return self.feature_names_stats
+        else:
+            raise ValueError('scope should be either 0 or 1 or 2')
+
+    def print_formatted_feats(self,scope=0):
+        if scope == 0:
+            for i, value in enumerate(self.feature_names+self.feature_names_stats):
+                print("\\hline \n {} & {} & {} \\\\".format(i+1, value, ""))
+        elif scope == 1:
+            for i, value in enumerate(self.feature_names):
+                print("\\hline \n {} & {} & {} \\\\".format(i+1, value, ""))
+        elif scope == 2:
+            for i, value in enumerate(self.feature_names_stats):
+                print("\\hline \n {} & {} & {} \\\\".format(i+1, value, ""))
+        else:
+            raise ValueError('scope should be either 0 or 1 or 2')
 
     def extract_visual_features(self, video_path, print_flag=True,
-                                online_display=False, save_results=True):
+                                online_display=False):
         """
         Extracts and displays features representing color, flow, objects detected
         and shot duration from video
@@ -385,16 +417,10 @@ class VisualFeatureExtractor(object):
                     print('Shape of feature stats vector including'
                           ' object features (after smoothing'
                           ' object confidences): {}'.format(features_stats.shape))
-
-            if save_results:
-                np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
-                np.savetxt("features_stats.csv", features_stats, delimiter=",")
-        if self.process_mode > 2:
-            f_names, f_names_stats = get_features_names(self.process_mode, self.which_object_categories)
+        if self.get_names:
+            return features_stats, self.feature_names_stats,feature_matrix, self.feature_names, shot_change_times
         else:
-            f_names, f_names_stats = get_features_names(self.process_mode)
-
-        return features_stats, f_names_stats, feature_matrix, f_names, shot_change_times
+            return features_stats, feature_matrix, shot_change_times
 
 
 
