@@ -16,8 +16,8 @@ class Spotify(object):
     def ask_spotify(title):
         """
         for a potential title, ask spotify for a name
-        :param title:
-        :return: list of song attribute
+        :param title: a string
+        :return: list of song attributes
         """
         song = sp.search(q=title, limit=1, type='track')
         try:
