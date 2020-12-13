@@ -33,13 +33,16 @@ def get_cropped_target_name(input_file, target_directory, index, file_type='.mp4
 
 
 def video_chunker(input_file, target_directory, target_name, file_type, file_length, chunk_size=15, start=0):
+    file_names = []
     chunk_index = 0
     while chunk_index <= file_length:
         starting_point = start/1000 + chunk_index
-        if file_length-chunk_index >= 15:
+        if file_length-chunk_index >= chunk_size:
             file_name = get_cropped_target_name(target_name, target_directory, chunk_index, file_type)
             print('exporting chunk ' + file_name)
             extract_subclip(input_file, starting_point, starting_point+chunk_size, file_name)
+            file_names.append(file_name)
             chunk_index += chunk_size
         else:
             chunk_index += chunk_size
+    return file_names
