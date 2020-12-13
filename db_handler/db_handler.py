@@ -101,6 +101,11 @@ class DatabaseHandler(object):
         else:
             return False
 
+    def insert_row_into_table(self, table, row_values):
+        insert = "INSERT INTO {}\n".format(table)
+        values = "VALUES (" + '{}, '*(len(row_values)-1) + '{}' + ')'
+        self.connection.execute(insert + values.format(*row_values))
+
     def close(self):
         self.connection.close()
 
