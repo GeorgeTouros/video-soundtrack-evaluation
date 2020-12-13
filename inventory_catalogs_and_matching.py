@@ -1,14 +1,14 @@
 import re
-import os
+import argparse
 import pandas as pd
-from utils.catalog_utils import create_catalog, cleanup_file_titles, get_temp_directory, setup_collection_directory, \
-    purge_temp_folder
-from utils.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files, get_video_audio_match_ids
 from mysql.connector.errors import ProgrammingError
-from utils.common_utils import script_start_time, script_run_time
-from config.paths import audio_path, video_path, midi_path, collected_data_path
-from db_handler.db_handler import DatabaseHandler
 from sqlalchemy import exc
+
+from config.paths import audio_path, video_path, midi_path
+from db_handler.db_handler import DatabaseHandler
+from utils.catalog_utils import create_catalog, cleanup_file_titles, setup_collection_directory
+from utils.catalog_utils import get_clean_song_titles_from_spotify, collect_matched_files
+from utils.common_utils import script_start_time, script_run_time
 
 try:
     from fingerprinting import djv
@@ -16,45 +16,43 @@ except ProgrammingError:
     db = DatabaseHandler()
     db.create_db('dejavu')
     from fingerprinting import djv
-from media_manipulation.song_retrieval import extract_audio_chunks_from_video, find_songs_in_temp_dir, \
-    get_previous_and_next_values, smooth_chunk_matches, ieob_tagging_for_chunk_matches, calculate_offset_diff
-from media_manipulation.song_retrieval import create_match_ids_per_video_segment, flag_possible_errors, get_crop_timestamps
-from media_manipulation.video_manipulation import blend_audio_with_video, crop_video_to_matches
 
 # set pandas print_options for debugging purposes
 pd.options.display.width = 0
 
+# Initiate the parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-M", "--mode", help="""Which part of the pipeline you need to run? 
+                                            Choose between:\n all,\n midi,\n audio,\n merge""")
+
+args = parser.parse_args()
+
 if __name__ == '__main__':
-    print('Catalog creation')
-    script_start_time()
+    acceptable_modes = ['all', 'midi', 'audio', 'video', 'merge']
+
+    if args.mode in acceptable_modes:
+        mode = args.mode
+        print('Running in {} mode'.format(mode))
+        script_start_time()
+    else:
+        raise ValueError("Please provide a valid value for --mode")
     # we will remove the windows hidden files
     irrelevant_files = re.compile('(desktop\.ini)|(.*\.(jpg|db|txt|url|srt|info|nfo))')
 
-    print("""How do you want to run the pipeline? Choose one of the modes below
-    all
-    midi
-    audio
-    video
-    merge (to merge audio and video catalogs)
-    prepare_fingerprints
-    fingerprint (to create fingerprints)
-    clip_finder (to find songs in videos)""")
-
-    mode = input()
-
-    if mode != 'fingerprint':
-        try:
-            db = DatabaseHandler('file_system_catalogs')
-        except exc.OperationalError:
-            db = DatabaseHandler()
-            db.create_db('file_system_catalogs')
-            db = DatabaseHandler('file_system_catalogs')
+    print('Connecting to DB')
+    try:
+        db = DatabaseHandler('file_system_catalogs')
+    except exc.OperationalError:
+        print('No such DB found. Setting up the Database')
+        db = DatabaseHandler()
+        db.create_db('file_system_catalogs')
+        db = DatabaseHandler('file_system_catalogs')
 
         db_connection = db.connection
 
     if mode in ["midi", "all"]:
         # start with the midi files
-        print('start midi catalog')
+        print('starting midi catalog')
         # Each midi file also has an indexing file that starts with .-
         # We remove those
         irrelevant_midi = re.compile('\._|\.DS_Store')
@@ -125,32 +123,5 @@ if __name__ == '__main__':
                                                                 con=db_connection,
                                                                 index=False,
                                                                 if_exists='replace')
-        merged.to_csv('var/midi_audio_matches.csv', index=False)
 
-    if mode in ['make_test', 'all']:
-
-        os.chdir('./temp/test_dataset/')
-        input_video = 'barry.s01e01.720p.web.h264-tbs[ettv].mkv'
-        input_audio = 'M414A5061_Alice Cooper - No More Mr. Nice Guy.mp3'
-        output_video = '../video/test.mp4'
-        delay = 62000
-        blend_audio_with_video(input_video, input_audio, output_video, delay)
-        extract_audio_chunks_from_video(output_video, 5 * 1000, 'mp4')
-        matches = find_songs_in_temp_dir()
-        match_df = pd.DataFrame.from_records(matches, columns=['chunk', 'start', 'end', 'song_id',
-                                                               'song_name', 'input_confidence', 'offset',
-                                                               'offset_seconds'])
-        match_df.sort_values(by='start', inplace=True)
-        match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-        match_df.sort_values(by='start', inplace=True)
-        match_df['song_id'], match_df['offset_seconds'] = zip(*match_df.apply(func=smooth_chunk_matches, axis=1))
-        match_df.sort_values(by='start', inplace=True)
-        match_df = get_previous_and_next_values(match_df, ['song_id', 'offset_seconds'])
-        match_df.sort_values(by='start', inplace=True)
-        match_df['match_tag'] = match_df.apply(func=ieob_tagging_for_chunk_matches, axis=1)
-        match_df.sort_values(by='start', inplace=True)
-        match_df['offset_diff'] = match_df.apply(func=calculate_offset_diff, axis=1)
-        match_df['match_id'] = create_match_ids_per_video_segment(match_df['match_tag'].values)
-        match_df = flag_possible_errors(match_df)
-        trimmer_df = get_crop_timestamps(match_df)
     script_run_time()

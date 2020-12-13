@@ -2,7 +2,7 @@
 import argparse
 from db_handler.db_handler import DatabaseHandler
 from mysql.connector.errors import ProgrammingError
-from utils.catalog_utils import get_collection_directory, purge_temp_folder
+from utils.catalog_utils import purge_temp_folder
 
 try:
     from fingerprinting import djv

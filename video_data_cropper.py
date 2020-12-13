@@ -10,9 +10,7 @@ if __name__ == '__main__':
     try:
         db = DatabaseHandler('file_system_catalogs')
     except exc.OperationalError:
-        db = DatabaseHandler()
-        db.create_db('file_system_catalogs')
-        db = DatabaseHandler('file_system_catalogs')
+        raise exc.OperationalError("You're impatient! First run inventory_catalogs_and_matching.py")
 
     db_connection = db.connection
 
