@@ -170,7 +170,7 @@ def get_collection_directory(data_type):
     :return: the directory
     """
     if data_type in ['audio', 'midi', 'video']:
-        dir = collected_data_path + str(data_type)
+        dir = collected_data_path + str(data_type) + '//'
         return dir
     else:
         raise ValueError('not acceptable data type')

@@ -1,5 +1,6 @@
 mido~=1.2.9
 pandas~=1.0.3
+numpy~=1.19.1
 spotipy~=2.12.0
 wheel~=0.34.2
 requests~=2.23.0
@@ -21,10 +22,19 @@ mysql-connector-python==8.0.17
 # sudo apt-get install libfreetype6-dev
 mysqlclient
 
+pyaudioanalysis==0.3.6
+opencv-contrib-python
 
 psycopg2-binary
 
 # pip install https://github.com/worldveil/dejavu/zipball/master --no-deps
 
+torch==1.7.0+cpu
+torchvision==0.8.1+cpu
+torchaudio==0.7.0
 
 moviepy~=1.0.3
+
+eyeD3~=0.9.5
+
+music21~=6.3.0
