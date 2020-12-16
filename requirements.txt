@@ -16,6 +16,7 @@ PyAudio
 pydub==0.23.1
 ffmpeg-python
 mysql-connector-python==8.0.17
+seaborn
 
 # for this to work first run sudo apt install python3-mysqldb
 # sudo apt-get install python3.7-dev default-libmysqlclient-dev build-essential
