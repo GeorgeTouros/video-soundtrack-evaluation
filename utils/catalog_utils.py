@@ -246,6 +246,14 @@ def setup_batch_temp_folders(batch_size, input_folder, temp_dir):
     return folder_names
 
 
+def setup_cache_temp_folder():
+    new_temp_dir_name = local_temp_dir+"cache/"
+    oldmask = os.umask(000)
+    os.makedirs(new_temp_dir_name, exist_ok=True, mode=0o755)
+    os.umask(oldmask)
+    return new_temp_dir_name
+
+
 def purge_temp_folder(temp_folder):
     for filename in os.listdir(temp_folder):
         file_path = os.path.join(temp_folder, filename)

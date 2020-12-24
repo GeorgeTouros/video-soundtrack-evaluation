@@ -12,7 +12,7 @@ except HTTPError:
 
 
 class VisualFeatureExtractor(object):
-    def __init__(self, process_mode, get_names=True):
+    def __init__(self, process_mode, get_names=True, online_display=False):
         """
         :param process_mode: Processing modes:
             - 0 : No processing
@@ -21,6 +21,7 @@ class VisualFeatureExtractor(object):
             - 3 : other object detection
         """
         self.process_mode = process_mode
+        self.online_display = online_display
 
         if no_ssd and self.process_mode == 3:
             self.process_mode = 2
@@ -74,8 +75,7 @@ class VisualFeatureExtractor(object):
         else:
             raise ValueError('scope should be either 0 or 1 or 2')
 
-    def extract_visual_features(self, video_path, print_flag=True,
-                                online_display=False):
+    def extract_visual_features(self, video_path, print_flag=True):
         """
         Extracts and displays features representing color, flow, objects detected
         and shot duration from video
@@ -268,7 +268,7 @@ class VisualFeatureExtractor(object):
 
                     # ---Display features on windows------------------------------
 
-                    if online_display and (count_process > 2) and \
+                    if self.online_display and (count_process > 2) and \
                             (count_process % plot_step == 0) and print_flag:
                         # draw RGB image and visualizations
                         vis = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)

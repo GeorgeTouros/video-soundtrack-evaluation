@@ -20,7 +20,7 @@ if __name__ == '__main__':
         sql = q_file.read()
         raw_data = pd.read_sql(sql=sql, con=db_connection, index_col='id')
 
-    v_e = VisualFeatureExtractor(process_mode=3, get_names=False)
+    v_e = VisualFeatureExtractor(process_mode=3, get_names=False, online_display=True)
     # v_features_names = v_e.get_features_names(scope=2)
     a_e = AudioFeatureExtractor(get_names=False)
     # a_features_names = a_e.get_feature_names()
@@ -68,7 +68,7 @@ if __name__ == '__main__':
                                      chunk_size=row['length'],
                                      start=row['start'])
         try:
-            features, _, _ = v_e.extract_visual_features(target_files[0], print_flag=False, online_display=False)
+            features, _, _ = v_e.extract_visual_features(target_files[0], print_flag=False)
             f_l = features.tolist()
             f_l.insert(0, row['clip_id'])
             db.insert_row_into_table('video_features', tuple(f_l))
