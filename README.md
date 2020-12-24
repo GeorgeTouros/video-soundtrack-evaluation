@@ -1,58 +1,78 @@
-# Data-Set Creation for the Task of Music Composition for Videos
+# Evaluation of Video Soundtracks using Machine Learning
+### Addressing the issues of data availability, feature extraction and classification
+
+This repo is created for my thesis, to complete my MSc in Data Science, 
+from the University of Peloponnese and NCSR Demokritos. 
+
+![Data Science](/var/graphs/dpms-logo.jpg)
 
 ## Objective
-We are trying to build a dataset that can tackle the task of music composition for films and videos 
-with deep learning. The task is challenging, as there are multiple ways to compose music through deep 
-learning, yet conditioning on features from other modalities, such as video, is not trivial. Some approaches, 
-usually based on recurrent networks and autoencoders, need symbolic representations of music (such as a music sheet, 
-or MIDI), and others, such as WaveNet and Transformer models, work directly on raw audio or on combinations
-of symbols and audio.  
-There is an abundance of audio, video and midi files, but so far we haven't been able to find some accurate 
-combination of all three. 
-## Challenges 
-The main challenge has been the combination of audio, midi and video, given the fact that for a deep 
-learning model to work, massive amounts of data are usually needed. We therefore set out to build a large, 
-open source dataset, that will accommodate the following traits:  
-* Large enough size to train some deep architecture
-* Scalable method of obtaining the data
-* Application of relevant data augmentation methods
-* Appropriate data management techniques that will ensure re-usability and
-scalability
-## Approach 
-Most of the approaches use either RNNs or Variational Autoencoders (or some combination of both), and 
-in all of these cases a symbolic representation of music is needed (i.e. a representation of notes and 
-note-length). The most common way to get that symbolic representation is by using MIDI files, a common 
-format for music encoding since the 80's. These models are usually trained on massive data-sets that are 
-in most cases relative to either classical music, or pop/rock songs. The latter case is of interest to us, as 
-these types of songs are often used as soundtracks in popular films.  
-To that end, we used the midi data-set that can be found [here](https://composing.ai/dataset) 
-*(last retrieved on 2020-05-02)*. The main problem of this dataset, is it's lack of
-structure. The files come from different data sources, using different naming 
-conventions and directory structures, making it quite hard to determine which songs
-are actually available in this directory. 
-In order to tackle this issue, we created a cataloging script 
-[catalog_work.py](https://github.com/GeorgeTouros/thesis_dataset_creation/blob/master/catalog_work.py) 
-that goes through the directories and uses RegEx to ignore irrelevant filenames. We then
-use a combination of RegEx and the Spotify API in order to get the proper name of each MIDI 
-filename, as well as relevant artist and URL information. The match rate is currently at 61%.
+The aim of this thesis is to address the challenges of combining multimodal data to evaluate video soundtracks. 
+To tackle tasks in the field of soundtrack generation, retrieval, or evaluation, data needs to be collected from 
+as many relevant modalities as possible, such as audio, video, and symbolic representations of music. 
+We propose a method of collecting relevant data from all of these modalities, and from them, we attempt to describe 
+and extract a comprehensive multimodal feature library. We construct a database by applying our method on a small 
+set of available data from the three relevant modalities. We implement and tune a classifier in our constructed 
+database of features with adequate results. The classifier attempts to discriminate between real and fake examples of 
+video soundtracks. 
 
-The resulting MIDI file set is useful, but comes with its own limitation for the task at hand, 
-which has to do with the fact that it mostly consists of know pop and rock songs. While a lot of 
-films use these as background music for montages, due to the fact that they are usually expensive to 
-obtain, this limits the pool of films and scenes we can draw from. Films usually also have their own
-score, which is unique to the film and in most cases carries the bulk of the scenes and the emotional 
-core of the film. Nevertheless, as this is the only large enough file set of MIDI files that we could
-find for free, we decided to work with this. 
+## Repo Structure
 
-We then used the Spotify API to get the songs that are featured in well-known films, in 
-[get_soundtracks.py](https://github.com/GeorgeTouros/thesis_dataset_creation/blob/master/get_soundtracks.py).
-We started from a list of films that we already know use mainly pop and rock songs, in order to 
-increase our chances of having them in our MIDI fileset. Usually the songs that are used come in compilation 
-albums, but these are not always published in their entirety due to copyright issues. We overcame this 
-problem using the community-based Spotify playlists, that are created by common users, and in most cases 
-are more complete than the official compilation albums for the film soundtracks. In order to get the most
-relevant playlist, we used filtering and appropriate RegEx. 
+* config: the central position of settings, paths and credentials
+  * credentials.py is where the credentials are stored for interacting with external APIs (database, Spotify etc.).
+  * paths.py is where all the paths are stored for data inputs and outputs, as well as for temporary folders.
+  * settings.py is where the parameters for audio and video processing are stored. These include: 
+    * CHUNK_SIZE_SECONDS: the size of the chunks for audio recognition within video files in seconds.
+    * CHUNK_SIZE_MS: the size of the chunks for audio recognition within video files in milliseconds (for direct use 
+      within ffmpeg).
+    * SAMPLE_RATE: the sample rate used for fingerprinting as well as for parsing audio files
+    * CHANNELS: set 1 for mono and 2 for stereo.
+    * BATCH_SIZE: the number of video files processed in each batch.
+    * AUDIO_FILE_TYPE: the output type for audio files. 
+  * db_handler: contains db_handler.py wherein exists the DatabaseHandler class, a wrapper class around the 
+    [sqlalchemy](https://www.sqlalchemy.org/) package. This class is used for invoking database operations, such as 
+    creating databases, tables, inserting lines, deleting schemas, tables, lines and simple queries. 
+    *  feature_extractor: contains three modules with classes that extract features for each of the modalities of interest. 
+        *  audio_features.py, which contains the AudioFeatureExtractor class. 
+        *  video_features.py, which contains the VideoFeatureExtractor class. 
+        *  symbolic_features.py, which contains the SymbolicFeatureExtractor class. 
+    *  fingerprinting: contains djv.py which has the wrapper functions around the 
+       [pyDejavu](https://github.com/worldveil/dejavu) library, for fingerprinting.  
+    *  media_manipulation: a module that contains all the scripts for manipulating audio and video data.
+        *  audio_conversions.py: includes wrapper functions for invoking ffmpeg commands to convert audio files into 
+           the appropriate format for fingerprinting. 
+        *  song_retrieval.py: contains all the functions needed to search within a video for songs. 
+        *  video_manipulation.py: includes wrapper functions for invoking ffmpeg commands to crop videos and mix audio with video.
+    *  spotify_wrapper: includes a wrapper class around the [spotipy](https://spotipy.readthedocs.io/en/2.16.1/) 
+       library. We use this class to retrieve information on song titles, during the matching of audio and MIDI files.
+    *  utils: a module containing various utilities for the all the other modules and scripts. These include:
+        *  catalog_utils.py: which contains utility functions for scanning folder directories and creating catalog 
+           entries within the database. 
+        *  common_utils.py: which contains utility functions for time calculations, and other miscellaneous tasks.
+    
+## Pipeline and order of execution
 
-Having used the same source for the ground truth of a song's identity (Spotify), we then proceed to query
-our MIDI fileset using the film soundtracks. The match rate is currently at 25%. 
- 
+![data collection](/var/graphs/Data%20Collection.png)
+
+![Feature Extraction](/var/graphs/Feature%20Extraction.png)
+
+## Dependencies with 3rd Party Libraries
+
+All code is written in Python, bash and SQL, run and tested in Ubuntu Linux 20.04. 
+There are some dependencies with 3rd party software beyond those that are mentioned in requirements.txt 
+These are:
+* [ffmpeg](https://ffmpeg.org/): A complete, cross-platform solution to record, convert and stream audio and video. 
+* [MySQL](https://www.mysql.com/): An open-source database
+* [Cuda Toolkit](https://developer.nvidia.com/cuda-downloads) (optional) If available, it would speed up the 
+  extraction of visual features.
+* [MuseScore 3](https://musescore.org/en): an open source software for visualizing MusicXML files. 
+* [FluidSynth](http://www.fluidsynth.org/): a real-time software synthesizer based on the SoundFont 2 specifications
+* [QjackCtl](https://qjackctl.sourceforge.io/): a simple Qt application to control the JACK sound server daemon, 
+  specific for the Linux Audio Desktop infrastructure. 
+* [QSynth](https://qsynth.sourceforge.io/): a fluidsynth GUI front-end application written in C++ around the Qt 
+  framework using Qt Designer.
+* [lilypond](http://lilypond.org/): a music engraving program, devoted to producing the highest-quality sheet music 
+  possible. We use it for some of the visualizations of sheet music in this thesis. 
+
+The MIDI data that we used comes from [composing.ai](https://composing.ai/dataset). MP3 and video data came from a 
+personal collection. 
