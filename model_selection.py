@@ -1,32 +1,26 @@
-from db_handler.db_handler import DatabaseHandler
-from utils.catalog_utils import setup_cache_temp_folder
-from config.paths import graphs_path
-import pandas as pd
-import os
-import numpy as np
 import itertools
-import matplotlib.pyplot as plt
+import os
 from statistics import mean
-import seaborn as sns
-from numpy import set_printoptions
-from sklearn.metrics import mean_squared_error, r2_score, f1_score, precision_score, recall_score, confusion_matrix
-from sklearn.metrics import roc_curve, classification_report, auc
-from sklearn.model_selection import train_test_split, GridSearchCV, KFold, cross_val_score
-from sklearn.model_selection import LeaveOneGroupOut
-from sklearn.impute import SimpleImputer
-from sklearn import preprocessing
-from sklearn.pipeline import make_pipeline
-from sklearn.decomposition import PCA
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
+from warnings import simplefilter
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from sklearn import neighbors
+from sklearn import preprocessing
 from sklearn import svm
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import f1_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import roc_curve, auc
+from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
-
-from warnings import simplefilter
+from sklearn.naive_bayes import GaussianNB
+from db_handler.db_handler import DatabaseHandler
 
 simplefilter(action='ignore', category=FutureWarning)
 pd.options.display.width = 0
@@ -82,6 +76,7 @@ def plot_roc_and_confusion_matrix(y_test, predicted, pred_proba, iteration=None,
     else:
         plt.show()
 
+
 if __name__ == '__main__':
     db = DatabaseHandler('file_system_catalogs')
     db_connection = db.connection
@@ -103,7 +98,8 @@ if __name__ == '__main__':
     fake = data.y.count() - match
     print('Total data points: ' + str(total_instances) +
           '\nNumber of matches: ' + str(match) +
-          '\nNumber of fakes: ' + str(fake))
+          '\nNumber of fakes: ' + str(fake)+
+          '\nNumber of columns: ' + str(len(data.columns)-3))
     empty_cols = [col for col in data.columns if (data[col] == 0).all()]
     print('The number of columns with only zero values is: {}'.format(str(len(empty_cols))))
     print('These are:')
@@ -119,7 +115,7 @@ if __name__ == '__main__':
         print("We have removed the following columns because they were more than 40% empty:")
         for col in cols_with_nas:
             print(col)
-        data = data.drop(empty_cols, axis=1)
+        data = data.drop(cols_with_nas, axis=1)
     #
     # df = data.melt(id_vars=['y'])
     # cols = data.columns
@@ -153,22 +149,27 @@ if __name__ == '__main__':
             drops.append(pair[1])
         if pair[0] not in drops and pair[0] not in singles:
             singles.append(pair[0])
-    data = data[singles]
+    # keep = [col for col in X.columns if col in singles or col not in drops]
+
+    # X = X[keep]
+    X = X[singles]
+    print('Total attributes surviving: {}'.format(len(X.columns)))
 
     imp = SimpleImputer(missing_values=np.NaN, strategy='mean')
     min_max_scaler = preprocessing.MinMaxScaler()
+
     logo = LeaveOneGroupOut()
-    logo.get_n_splits(X, y, groups)
+    print(logo.get_n_splits(X, y, groups))
 
     # we choose a common seed for all algorithms
     seed = 2015
     # we choose a common number of trees for ensembles
-    num_trees = 800
+    num_trees = 600
 
     models = [('Decision Tree', DecisionTreeClassifier(criterion='gini', max_depth=4, random_state=seed)),
               ('Logistic Regression', LogisticRegression(random_state=seed, solver='liblinear')),
               ('kNN', neighbors.KNeighborsClassifier(n_neighbors=3, weights='uniform', n_jobs=-1)),
-              ('SVM', svm.SVC(kernel='poly', C=1, gamma='auto', cache_size=12288, probability=True)),
+              ('SVM', svm.SVC(kernel='sigmoid', C=1, gamma='auto', cache_size=12288, probability=True)),
               ('Random Forest',RandomForestClassifier(n_estimators=num_trees,max_depth=1,n_jobs=-1,random_state=seed)),
               ('Bagged Trees', BaggingClassifier(
                   base_estimator=DecisionTreeClassifier(criterion='gini', max_depth=1, random_state=seed),
@@ -176,7 +177,10 @@ if __name__ == '__main__':
               ('AdaBoost', AdaBoostClassifier(
                   base_estimator=DecisionTreeClassifier(criterion='gini', max_depth=1, random_state=seed),
                   n_estimators=num_trees, random_state=seed)),
-              ('XGBoost', XGBClassifier(nthread=8, use_label_encoder=False))]
+              ('XGBoost', XGBClassifier(nthread=8, use_label_encoder=False)),
+              ('Naive Bayes', GaussianNB())
+              ]
+
 
     fold_results = {}
     for name, model in models:
@@ -215,12 +219,12 @@ if __name__ == '__main__':
 
             print("%03s: Accuracy: %0.2f Precision: %0.2f Recall: %0.2f F_1 score: %0.2f"
                   % (name, accuracy, precision, recall, f1))
-            plot_roc_and_confusion_matrix(y_test,
-                                          predicted,
-                                          pred_proba,
-                                          iteration=i,
-                                          model_name=name,
-                                          save_dir=graphs_path)
+            # plot_roc_and_confusion_matrix(y_test,
+            #                               predicted,
+            #                               pred_proba,
+            #                               iteration=i,
+            #                               model_name=name,
+            #                               save_dir=graphs_path)
         i += 1
 
     compare = {}
@@ -232,5 +236,5 @@ if __name__ == '__main__':
         compare[model] = model_stats
 
     model_comparison = pd.DataFrame(compare)
-    model_comparison.T.to_csv('./var/model_results_drop_corr_800_trees_depth1.csv')
+    model_comparison.T.to_csv('./var/model_results_drop_corr_sigmoid1_3NN_scaled_600_trees_depth1.csv')
     print('end')
