@@ -76,3 +76,8 @@ These are:
 
 The MIDI data that we used comes from [composing.ai](https://composing.ai/dataset). MP3 and video data came from a 
 personal collection. 
+
+## The Spotify API
+In order to match the audio and MIDI files, we needed to use a knowledge base that could provide a ground truth for song information. We chose the popular music streaming platform [Spotify](www.spotify.com). The platform provides a web-based API, which we access using the relevant Python library [spotipy](https://spotipy.readthedocs.io/en/2.16.1/). To run the code it is necessary to set up a free account in order to complete the user authorization in each call. An app needs to be registered at [MyDashboard](https://developer.spotify.com/documentation/web-api/) to get the credentials necessary to make authorized calls (a client id and client secret). In order to achieve the maximum reply rate possible, we used the client credentials authorisation flow. These credentials are stored in the file config/credentials.py.
+
+The class that we have created, named _Spotify_, is a rudimentary wrapper class. It exposes the functions that are useful for the matching process, namely the song searching function, that returns a song name and metadata. 
